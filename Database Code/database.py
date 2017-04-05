@@ -178,7 +178,7 @@ class database(metaclass=abc.ABCMeta):
     def _rmItem(self, itemKey):
         '''Doc String'''
 
-        self.engine.execute('DELETE FROM "{}" WHERE "{}" = "{}"'.
+        self.engine.execute('DELETE FROM "{}" WHERE "{}" = {}'.
                             format(self._tblName, self._itemKeyName, itemKey))
         if itemKey in self.itemKeys:
             self.itemKeys.remove(itemKey)
@@ -247,7 +247,7 @@ class database(metaclass=abc.ABCMeta):
             return pd.DataFrame()
 
         return pd.read_sql_query(
-            'SELECT * FROM "{}" WHERE "{}" = "{}"'.format(
+            'SELECT * FROM "{}" WHERE "{}" = {}'.format(
                 self._tblName, self._itemKeyName, itemKey),
             self.engine, parse_dates=[k for k, v in self._tblDTypes.items()
                                       if v == _date])
