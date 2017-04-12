@@ -1,17 +1,18 @@
 import numpy as np
-from matplotlib import pyplot as plt
 import pandas as pd
 from scipy import stats
+from matplotlib import pyplot as plt
 from matplotlib import lines as mlines
-from betterModels import betterKernelDensity
 from sklearn.model_selection import GridSearchCV
 from PIL import Image as pilimg
+
+from ..better.kde import BetterKernelDensity
+
+plt.style.use('personal')
 
 
 def correlationPlot(Y, Yp, labels=None, units=None, **plotParams):
     '''Doc String'''
-
-    plt.style.use('personal')
 
     # Handle Pandas DataFrames
     if isinstance(Y, pd.DataFrame):
@@ -104,12 +105,12 @@ def plotKDHist(data,
     xFit = np.linspace(xmin, xmax, 1e3)
 
     if bandwidth is None:
-        kde = betterKernelDensity(kernel=kernel, rtol=1e-4)
+        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4)
         parameters = {'bandwidth': np.logspace(-3, -1, num=10) * (xmax - xmin)}
         trainGrid = GridSearchCV(kde, parameters, cv=3, n_jobs=-1).fit(fitData)
         kde = trainGrid.best_estimator_
     else:
-        kde = betterKernelDensity(kernel=kernel, rtol=1e-4,
+        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
                                   bandwidth=bandwidth).fit(fitData)
 
     fitL, fitU = kde.confidence(xFit[:, None], alpha=alpha)
@@ -120,7 +121,6 @@ def plotKDHist(data,
                         format(1e2 * (1 - alpha)))
         return ax, kde
 
-    plt.style.use('personal')
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.fill_between(xFit, fitU, fitL, alpha=0.35, lw=0,
@@ -151,7 +151,6 @@ def plotImages(X, Y, images, sizes=20, alphas=1, ax=None):
     ims = [pilimg.open(image) for image in images]
 
     if ax is None:
-        plt.style.use('personal')
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 

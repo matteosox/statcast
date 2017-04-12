@@ -1,8 +1,11 @@
+import time
+import datetime as dt
+
 import pandas as pd
 import sqlalchemy as sa
-import datetime as dt
-from database import database
-import time
+
+from .database import Database
+
 
 _string = sa.types.String
 _integer = sa.types.Integer
@@ -99,7 +102,7 @@ _venues = [
     'NYY']
 
 
-class db(database):
+class DB(Database):
     '''Doc String'''
 
     dbName = 'bbsavant'

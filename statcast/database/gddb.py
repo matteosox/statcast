@@ -1,9 +1,13 @@
-from database import database
-import requests
-import io
-import xml.etree.ElementTree as ET
 import abc
 import time
+import io
+
+import xml.etree.ElementTree as ET
+
+import requests
+
+from .database import Database
+
 
 _baseurl = \
     'http://gd2.mlb.com/components/game/mlb/year_{yyyy}/month_{mm}/day_{dd}/{}'
@@ -11,7 +15,7 @@ _baseurl = \
 dailyScoreboard = 'master_scoreboard.xml'
 
 
-class gdDatabase(database, metaclass=abc.ABCMeta):
+class GdDatabase(Database, metaclass=abc.ABCMeta):
     '''Doc String'''
 
     _itemKeyName = 'game_pk'

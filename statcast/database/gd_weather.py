@@ -1,8 +1,11 @@
+import datetime as dt
+import xml.etree.ElementTree as ET
+
 import pandas as pd
 import sqlalchemy as sa
-import datetime as dt
-from gdDatabase import gdDatabase
-import xml.etree.ElementTree as ET
+
+from .gddb import GdDatabase
+
 
 _string = sa.types.String
 _integer = sa.types.Integer
@@ -10,7 +13,7 @@ _float = sa.types.Float
 _date = sa.types.Date
 
 
-class db(gdDatabase):
+class DB(GdDatabase):
     '''Doc String'''
 
     dbName = 'gdWeather'

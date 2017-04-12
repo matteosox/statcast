@@ -1,10 +1,14 @@
-from database import database
-import requests
 import io
+
+import datetime as dt
 import xml.etree.ElementTree as ET
+
+import requests
 import pandas as pd
 import sqlalchemy as sa
-import datetime as dt
+
+from .database import Database
+
 
 _string = sa.types.String
 _integer = sa.types.Integer
@@ -18,7 +22,7 @@ _baseURL = \
 dailyScoreboard = 'master_scoreboard.xml'
 
 
-class db(database):
+class DB(Database):
     '''Doc String'''
 
     dbName = 'gdScoreboardGames'

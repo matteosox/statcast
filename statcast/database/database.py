@@ -1,11 +1,15 @@
-import pandas as pd
-import sqlalchemy as sa
-import datetime as dt
-import numpy as np
 import logging
 import abc
-from tools import fixPath
+
 from pathlib import Path
+import datetime as dt
+
+import numpy as np
+import pandas as pd
+import sqlalchemy as sa
+
+from ..tools.fixpath import findFile
+
 
 _string = sa.types.String
 _integer = sa.types.Integer
@@ -14,7 +18,7 @@ _date = sa.types.Date
 _binary = sa.types.Binary
 
 
-class database(metaclass=abc.ABCMeta):
+class Database(metaclass=abc.ABCMeta):
     '''Doc String'''
 
     _username = None
@@ -65,7 +69,7 @@ class database(metaclass=abc.ABCMeta):
 
         # Local database
         if self._host is None:
-            dbPath = fixPath.findFile(self.dbName + '.db')
+            dbPath = findFile(self.dbName + '.db')
             if not dbPath:
                 dbPath = self.dbName + '.db'
             logPath = str(Path(dbPath).with_name(self.dbName + '.log'))

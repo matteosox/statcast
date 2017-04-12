@@ -1,9 +1,13 @@
-import pandas as pd
-import numpy as np
-import sqlalchemy as sa
 import datetime as dt
-from gdDatabase import gdDatabase
+
 import xml.etree.ElementTree as ET
+
+import numpy as np
+import pandas as pd
+import sqlalchemy as sa
+
+from .gddb import GdDatabase
+
 
 _string = sa.types.String
 _integer = sa.types.Integer
@@ -12,7 +16,7 @@ _date = sa.types.Date
 _binary = sa.types.Binary
 
 
-class db(gdDatabase):
+class DB(GdDatabase):
     '''Doc String'''
 
     dbName = 'gdGameEvents'
