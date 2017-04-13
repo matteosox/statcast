@@ -46,5 +46,5 @@ config.codekit
 # Repo Specific #
 #################
 **/__pycache__
-Storage
+*/Storage/**
 Media
