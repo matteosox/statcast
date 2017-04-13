@@ -14,7 +14,10 @@ else:
 
 from ..better.kde import BetterKernelDensity
 
-plt.style.use('personal')
+try:
+    plt.style.use('personal')
+except:
+    pass
 
 
 def correlationPlot(Y, Yp, labels=None, units=None, **plotParams):
