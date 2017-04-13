@@ -9,6 +9,9 @@ from .database.gd_weather import DB as WeatherDB
 from .better.randomforest import TreeSelectingRFRegressor
 from .better.mixed import BetterLME4
 from .better.utils import findTrainSplit, otherRFE
+from .tools.plot import plotKDHist
+from .better.kde import BetterKernelDensity
+from .better.spark import GridSearchCV
 
 from . import __path__
 
@@ -66,8 +69,6 @@ class Bip():
         self.years = years
 
         self._initData(years)
-        self.totalData = self.data
-        self.data = self.data.sample(frac=0.2)  # TAKE THIS OUT LATER!!!
 
         self._initSCImputer(scImputerName=scImputerName)
         self._imputeSCData()
@@ -132,7 +133,7 @@ class Bip():
     def _imputeSCData(self):
         '''Doc String'''
 
-        imputed = self.imputed(_scImputer.yLabels)
+        imputed = self.missing(_scImputer.yLabels)
         imputeData = self.data[~self.data.exclude & imputed]
         imputeY = pd.DataFrame(self.scImputer.predictD(imputeData),
                                columns=self.scImputer.yLabels)
@@ -167,7 +168,7 @@ class Bip():
     def _createSCImputer(self):
         '''Doc String'''
 
-        imputed = self.imputed(_scImputer.yLabels)
+        imputed = self.missing(_scImputer.yLabels)
         trainData = self.data[~self.data.exclude & ~imputed]
         self.scImputer = findTrainSplit(_scImputer, trainData,
                                         n_jobs=self.n_jobs)
@@ -192,6 +193,7 @@ class Bip():
                     _scFactorMdl.load(name=name, searchDirs=(_storagePath,))
             except FileNotFoundError:
                 self._createSCFactorMdl()
+                self.scFactorMdl.name = name
                 self.scFactorMdl.save(os.path.join(_storagePath,
                                                    self.scFactorMdl.name))
 
@@ -200,9 +202,77 @@ class Bip():
 
         self.scFactorMdl = _scFactorMdl
 
-    def imputed(self, columns):
+    def missing(self, columns):
         '''Doc String'''
 
         return self.data.missing.map(lambda x:
                                      any(y in x
                                          for y in columns))
+
+    def plotSCHistograms(self):
+        '''Doc String'''
+
+        labels = ['Exit Velocity', 'Launch Angle', 'Hit Distance']
+        units = ['mph', 'degrees', 'feet']
+
+        imputed = self.missing(self.scImputer.yLabels)
+        inds = self.data.loc[~self.data.exclude & ~imputed, :].index
+        trainInds = self.scImputer.trainX_.index
+        testInds = inds.difference(trainInds)
+
+        testData = self.data.loc[testInds, :]
+        imputeData = self.data.loc[~self.data.exclude & imputed, :]
+
+        testY = self.scImputer.createY(testData).values.T
+        testYp = self.scImputer.predictD(testData).T
+        imputeY = self.scImputer.predictD(imputeData).T
+
+        name = 'bandwidths{}.csv'.format('_'.join(str(year)
+                                                  for year in self.years))
+
+        try:
+            bandwidths = pd.read_csv(os.path.join(_storagePath, name),
+                                     index_col=0)
+        except FileNotFoundError:
+            bandwidths = pd.DataFrame({'test': True,
+                                       'testP': True,
+                                       'impute': True},
+                                      index=self.scImputer.yLabels)
+            for data, col in zip([testY, testYp, imputeY],
+                                 ['test', 'testP', 'impute']):
+                for subData, row in zip(data, self.scImputer.yLabels):
+                    xmin, xmax = min(subData), max(subData)
+                    kde = BetterKernelDensity(kernel='gaussian', rtol=1e-4)
+                    param_grid = {'bandwidth': np.logspace(-3, -1, num=20) *
+                                  (xmax - xmin)}
+                    trainGrid = \
+                        GridSearchCV(kde, param_grid, cv=10,
+                                     n_jobs=self.n_jobs).fit(subData[:, None])
+                    bandwidths.loc[row, col] = \
+                        trainGrid.best_params_['bandwidth']
+                    bandwidths.to_csv(os.path.join(_storagePath, name))
+
+        for trainy, trainyp, imputey, label, unit, yLabel in \
+            zip(testY, testYp, imputeY, labels, units,
+                self.scImputer.yLabels):
+
+            fig, kde = plotKDHist(trainy, kernel='gaussian',
+                                  bandwidth=bandwidths.loc[yLabel, 'test'])
+            ax = fig.gca()
+            plotKDHist(trainyp, kernel='gaussian', ax=ax,
+                       bandwidth=bandwidths.loc[yLabel, 'testP'])
+            plotKDHist(imputey, kernel='gaussian', ax=ax,
+                       bandwidth=bandwidths.loc[yLabel, 'impute'])
+
+            ax.set_xlim(left=min(trainy.min(), trainyp.min(), imputey.min()),
+                        right=max(trainy.max(), trainyp.max(), imputey.max()))
+            ax.set_ylim(bottom=0, auto=True)
+
+            ax.set_xlabel(label + ' ({})'.format(unit))
+            ax.legend(labels=('Test Data',
+                              'Test Data Imputed',
+                              'Missing Data Imputed'), loc='best')
+
+            fig.savefig('{} {} Histogram'.
+                        format(', '.join(str(year) for year in self.years),
+                               label))

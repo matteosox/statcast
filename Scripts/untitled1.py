@@ -118,3 +118,15 @@ param_grid = {'formulas': formulas[:2]}
 newFactorMdl = GridSearchCV(newFactorMdl, param_grid). \
     fit(newFactorMdl.createX(subData), newFactorMdl.createY(subData)). \
     best_estimator_
+
+# %%
+
+estimator = BetterRandomForestRegressor(name='test',
+                                        xLabels=['px', 'pz', 'hitDistanceGD', 'hc_x', 'hc_y'],
+                                        yLabels=['hit_distance_sc', 'hit_speed'],
+                                        n_jobs=-1)
+param_grid = {'n_estimators': [5, 10, 15]}
+
+data = bip.data.copy().loc[~bip.data.exclude & ~bip.imputed(estimator.xLabels + estimator.yLabels),:]
+
+result = GridSearchCV(estimator, param_grid, n_jobs=1).fit(estimator.createX(data), estimator.createY(data))

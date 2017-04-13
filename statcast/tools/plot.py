@@ -4,7 +4,13 @@ from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib import lines as mlines
 from sklearn.model_selection import GridSearchCV
-from PIL import Image as pilimg
+
+try:
+    from PIL import Image as pilimg
+except ImportError:
+    imaging = False
+else:
+    imaging = True
 
 from ..better.kde import BetterKernelDensity
 
@@ -134,42 +140,42 @@ def plotKDHist(data,
 
     ax.set_ylabel('Probability Density (%)')
     ax.set_xlim(left=xmin, right=xmax)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0, auto=True)
     return fig, kde
 
+if imaging:
+    def plotImages(X, Y, images, sizes=20, alphas=1, ax=None):
+        '''Doc String'''
 
-def plotImages(X, Y, images, sizes=20, alphas=1, ax=None):
-    '''Doc String'''
+        if not isinstance(sizes, (list, tuple)):
+            sizes = (sizes,) * len(X)
+        if not isinstance(images, (list, tuple)):
+            images = (images,) * len(X)
+        if not isinstance(alphas, (list, tuple)):
+            alphas = (alphas,) * len(X)
 
-    if not isinstance(sizes, (list, tuple)):
-        sizes = (sizes,) * len(X)
-    if not isinstance(images, (list, tuple)):
-        images = (images,) * len(X)
-    if not isinstance(alphas, (list, tuple)):
-        alphas = (alphas,) * len(X)
+        ims = [pilimg.open(image) for image in images]
 
-    ims = [pilimg.open(image) for image in images]
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        # plot and set axis limits
+        ax.plot(X, Y, 'o', mfc='None', mec='None', markersize=max(sizes))
+        ax.axis(ax.axis())
 
-    # plot and set axis limits
-    ax.plot(X, Y, 'o', mfc='None', mec='None', markersize=max(sizes))
-    ax.axis(ax.axis())
+        for size, im, alpha, x, y in zip(sizes, ims, alphas, X, Y):
+            offsetsPx = np.array([sz / max(im.size) * size / 72 / 2 *
+                                  ax.get_figure().dpi for sz in im.size])
+            pxPerUnit = ax.transData.transform((1, 1)) - \
+                ax.transData.transform((0, 0))
+            offsetsUnit = offsetsPx / pxPerUnit
+            extent = (x - offsetsUnit[0], x + offsetsUnit[0],
+                      y - offsetsUnit[1], y + offsetsUnit[1])
+            ax.imshow(im, alpha=alpha, extent=extent, aspect='auto',
+                      interpolation='bilinear')
 
-    for size, im, alpha, x, y in zip(sizes, ims, alphas, X, Y):
-        offsetsPx = np.array([sz / max(im.size) * size / 72 / 2 *
-                              ax.get_figure().dpi for sz in im.size])
-        pxPerUnit = ax.transData.transform((1, 1)) - \
-            ax.transData.transform((0, 0))
-        offsetsUnit = offsetsPx / pxPerUnit
-        extent = (x - offsetsUnit[0], x + offsetsUnit[0],
-                  y - offsetsUnit[1], y + offsetsUnit[1])
-        ax.imshow(im, alpha=alpha, extent=extent, aspect='auto',
-                  interpolation='bilinear')
-
-    try:
-        return fig
-    except:
-        return ax
+        try:
+            return fig
+        except:
+            return ax
