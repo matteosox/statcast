@@ -69,64 +69,16 @@ figs2016 = correlationPlot(estimator2016.trainY_,
                        units=units,
                        ms=1)
 
-# %% Choose LME4 model from a range of formulas using REML
-
-from betterModels import betterLME4
-
-subData = bip.data[~bip.data.exclude].sample
-subData['imputed'] = bip.imputed[~bip.data.exclude]
-formulas = ('(1|batter) + (1|pitcher) + imputed + (1|home_team)',
-            '(1|batter) + (1|pitcher) + gdTemp + imputed + (1|home_team)',
-            '(1|batter) + (1|pitcher) + gdTemp + imputed + (imputed||home_team)',
-            '(1|batter) + (1|pitcher) + imputed + (imputed||home_team)')
-
-xLabels = ['batter', 'pitcher', 'gdTemp', 'home_team', 'imputed']
-yLabels = ['hit_speed']
-
-newFactorMdl = betterLME4(name='scFactorMdl2016b',
-                       xLabels=xLabels,
-                       yLabels=yLabels)
-
-newFactorMdl = newFactorMdl.chooseFormula(subData, formulas, fullOut=True)
-
-# %% Choose LME4 model from a range of formulas using cross-validation
+# %% Choose model from a range of models using cross-validation
 
 from statcast.bip import Bip
-from statcast.better.mixed import BetterLME4
 from statcast.better.spark import GridSearchCV
 
 
 years = (2016,)
 bip = Bip(years=years)
 
-subData = bip.data[~bip.data.exclude]
-subData['imputed'] = bip.imputed(bip.scImputer.yLabels)[~bip.data.exclude]
-formulas = \
-    ('(1|batter) + (1|pitcher) + imputed + (1|home_team)',
-     '(1|batter) + (1|pitcher) + gdTemp + imputed + (1|home_team)',
-     '(1|batter) + (1|pitcher) + gdTemp + imputed + (imputed||home_team)',
-     '(1|batter) + (1|pitcher) + imputed + (imputed||home_team)')
+trainData = bip.data[~bip.data.exclude].sample(frac=0.05)
+param_grid = {'criterion': ['mse', 'mae']}
 
-xLabels = ['batter', 'pitcher', 'gdTemp', 'home_team', 'imputed']
-yLabels = ['hit_speed']
-
-newFactorMdl = BetterLME4(name='scFactorMdl2016b',
-                          xLabels=xLabels,
-                          yLabels=yLabels)
-param_grid = {'formulas': formulas[:2]}
-
-newFactorMdl = GridSearchCV(newFactorMdl, param_grid). \
-    fit(newFactorMdl.createX(subData), newFactorMdl.createY(subData)). \
-    best_estimator_
-
-# %%
-
-estimator = BetterRandomForestRegressor(name='test',
-                                        xLabels=['px', 'pz', 'hitDistanceGD', 'hc_x', 'hc_y'],
-                                        yLabels=['hit_distance_sc', 'hit_speed'],
-                                        n_jobs=-1)
-param_grid = {'n_estimators': [5, 10, 15]}
-
-data = bip.data.copy().loc[~bip.data.exclude & ~bip.imputed(estimator.xLabels + estimator.yLabels),:]
-
-result = GridSearchCV(estimator, param_grid, n_jobs=1).fit(estimator.createX(data), estimator.createY(data))
+result = GridSearchCV(bip.scImputer, param_grid).fit(bip.scImputer.createX(trainData), bip.scImputer.createY(trainData))

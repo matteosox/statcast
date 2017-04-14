@@ -15,6 +15,7 @@ def otherRFE(estimator, data, step=1, cv=None, scoring=None, scoreThresh=2e-2,
     intStep = step
 
     def score():
+        estimator.fitD(data)
         return cross_val_score(estimator, estimator.createX(data),
                                estimator.createY(data), scoring=scoring,
                                cv=cv, n_jobs=n_jobs)
