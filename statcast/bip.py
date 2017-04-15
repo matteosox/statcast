@@ -210,7 +210,7 @@ class Bip():
 
         self.scFactorMdl = _scFactorMdl.chooseFormula(trainData,
                                                       _scFactorMdl.formulas,
-                                                      n_jobs=-1,
+                                                      n_jobs=self.n_jobs,
                                                       cv=10)
 
     def missing(self, columns):
