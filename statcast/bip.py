@@ -52,10 +52,16 @@ _scImputer = \
                              oob_score=True,
                              n_jobs=-1)
 _scFactorMdl = \
-    BetterLME4(xLabels=['batter', 'pitcher', 'gdTemp', 'home_team'],
-               yLabels=['hit_speed', 'hit_angle', 'hit_distance_sc'],
-               formulas='(1|batter) + (1|pitcher) + gdTemp + '
-               '(1|home_team)')
+    BetterLME4(
+        xLabels=['batter', 'pitcher', 'gdTemp', 'home_team', 'scImputed'],
+        yLabels=['hit_speed', 'hit_angle', 'hit_distance_sc'],
+        formulas=('(1|batter) + (1|pitcher) + scImputed + (1|home_team)',
+                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
+                  '(1|home_team)',
+                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
+                  '(scImputed||home_team)',
+                  '(1|batter) + (1|pitcher) + scImputed + '
+                  '(scImputed||home_team)'))
 
 
 class Bip():
@@ -126,21 +132,23 @@ class Bip():
         self.data['missing'] = [', '.join(self.data.columns[row])
                                 for row in self.data.isnull().values]
 
+        self.data['scImputed'] = self.missing(_scImputer.yLabels)
+
         self.data.fillna(self.data.median(), inplace=True)
         return
 
     def _imputeSCData(self):
         '''Doc String'''
 
-        imputed = self.missing(_scImputer.yLabels)
-        imputeData = self.data[~self.data.exclude & imputed]
+        imputeData = self.data[~self.data.exclude & self.data.scImputed]
         imputeY = pd.DataFrame(self.scImputer.predictD(imputeData),
                                columns=self.scImputer.yLabels)
 
         for label in self.scImputer.yLabels:
             imputeThisCol = self.data.missing.map(lambda x: label in x)
             self.data.loc[~self.data.exclude & imputeThisCol, label] = \
-                imputeY.loc[imputeThisCol[~self.data.exclude & imputed].values,
+                imputeY.loc[imputeThisCol[~self.data.exclude &
+                                          self.data.scImputed].values,
                             label].values
 
         return
@@ -167,8 +175,7 @@ class Bip():
     def _createSCImputer(self):
         '''Doc String'''
 
-        imputed = self.missing(_scImputer.yLabels)
-        trainData = self.data[~self.data.exclude & ~imputed]
+        trainData = self.data[~self.data.exclude & ~self.data.scImputed]
         self.scImputer = findTrainSplit(_scImputer, trainData,
                                         n_jobs=self.n_jobs)
         subTrainData = trainData.loc[self.scImputer.trainX_.index, :]
@@ -199,15 +206,13 @@ class Bip():
     def _createSCFactorMdl(self):
         '''Doc String'''
 
-        self.scFactorMdl = _scFactorMdl
-#        imputed = self.missing(_scImputer.yLabels)
-#        trainData = self.data[~self.data.exclude & ~imputed]
-#
-#        param_grid = {'formulas': _scFactorMdl.formulas}
-#
-#        self.scFactorMdl = GridSearchCV(_scFactorMdl, param_grid). \
-#            fit(_scFactorMdl.createX(trainData), _scFactorMdl.createY(trainData)). \
-#            best_estimator_
+        trainData = self.data[~self.data.exclude]
+
+        param_grid = {'formulas': _scFactorMdl.formulas[:2]} # TODO: use all formulas, not just first two
+
+        self.scFactorMdl = GridSearchCV(_scFactorMdl, param_grid). \
+            fit(_scFactorMdl.createX(trainData),
+                _scFactorMdl.createY(trainData)) # TODO: must eventually choose best estimator
 
     def missing(self, columns):
         '''Doc String'''
@@ -222,13 +227,13 @@ class Bip():
         labels = ['Exit Velocity', 'Launch Angle', 'Hit Distance']
         units = ['mph', 'degrees', 'feet']
 
-        imputed = self.missing(self.scImputer.yLabels)
-        inds = self.data.loc[~self.data.exclude & ~imputed, :].index
+        inds = self.data.loc[~self.data.exclude & ~self.data.scImputed,
+                             :].index
         trainInds = self.scImputer.trainX_.index
         testInds = inds.difference(trainInds)
 
         testData = self.data.loc[testInds, :]
-        imputeData = self.data.loc[~self.data.exclude & imputed, :]
+        imputeData = self.data.loc[~self.data.exclude & self.data.scImputed, :]
 
         testY = self.scImputer.createY(testData).values.T
         testYp = self.scImputer.predictD(testData).T
