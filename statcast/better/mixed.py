@@ -11,7 +11,7 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 
 from .base import BetterModel
-from .utils import GridSearchCV
+from .spark import GridSearchCV
 
 pandas2ri.activate()
 rLME4 = importr('lme4')
