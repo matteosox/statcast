@@ -11,6 +11,7 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 
 from .base import BetterModel
+from .utils import GridSearchCV
 
 pandas2ri.activate()
 rLME4 = importr('lme4')
@@ -119,30 +120,25 @@ class BetterLME4(BaseEstimator, RegressorMixin, BetterModel):
         return -np.sqrt([mean_squared_error(y, yp, sample_weight)
                          for y, yp in zip(Y.T, Yp.values.T)]).mean()
 
-    def chooseFormula(self, data, formulas, fullOut=False):
+    def chooseFormula(self, data, formulas, n_jobs=1, cv=None, refit=True):
         '''Doc String'''
 
-        pastREML = self.LME4Params.get('REML', None)
-        self.LME4Params['REML'] = False
+        self.cv_results_ = []
+        yLabels = self.yLabels
+        formulaChoices = []
+        param_grid = {'formulas': formulas}
+        for yLabel in yLabels:
+            self.yLabels = [yLabel]
 
-        scores = pd.DataFrame()
-        for formula in formulas:
-            self.formulas = formula
+            result = GridSearchCV(self, param_grid,
+                                  n_jobs=n_jobs, cv=cv, refit=False). \
+                fit(self.createX(data), self.createY(data))
+            formulaChoices.append(result.best_params['formulas'])
+            self.cv_results_.append(pd.DataFrame(result.cv_results_))
+
+        self.formulas = formulaChoices
+
+        if refit:
             self.fitD(data)
-            score = {}
-            for name, mdl in self.models_.items():
-                score[name] = pandas2ri.ri2py(rLME4.llikAIC(mdl)[1])[1]
-            scores = scores.append(pd.DataFrame(score, index=(0,)),
-                                   ignore_index=True)
 
-        if pastREML is None:
-            del self.LME4Params['REML']
-        else:
-            self.LME4Params['REML'] = pastREML
-
-        self.formulas = \
-            tuple(formulas[scores[yLabel].idxmin()] for yLabel in self.yLabels)
-
-        self.fitD(data)
-        self.scores_ = scores
         return self

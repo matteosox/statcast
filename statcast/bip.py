@@ -208,11 +208,10 @@ class Bip():
 
         trainData = self.data[~self.data.exclude]
 
-        param_grid = {'formulas': _scFactorMdl.formulas[:2]} # TODO: use all formulas, not just first two
-
-        self.scFactorMdl = GridSearchCV(_scFactorMdl, param_grid). \
-            fit(_scFactorMdl.createX(trainData),
-                _scFactorMdl.createY(trainData)) # TODO: must eventually choose best estimator
+        self.scFactorMdl = _scFactorMdl.chooseFormula(trainData,
+                                                      _scFactorMdl.formulas,
+                                                      n_jobs=-1,
+                                                      cv=10)
 
     def missing(self, columns):
         '''Doc String'''
