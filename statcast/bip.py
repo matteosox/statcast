@@ -185,9 +185,9 @@ class Bip():
         elif scFactorMdlName:
             self.scFactorMdl = _scFactorMdl.load(scFactorMdlName)
         else:
+            name = 'scFactorMdl{}'.format('_'.join(str(year)
+                                                   for year in self.years))
             try:
-                name = 'scFactorMdl{}'.format('_'.join(str(year)
-                                                       for year in self.years))
                 self.scFactorMdl = \
                     _scFactorMdl.load(name=name, searchDirs=(_storagePath,))
             except FileNotFoundError:
@@ -199,14 +199,15 @@ class Bip():
     def _createSCFactorMdl(self):
         '''Doc String'''
 
-        imputed = self.missing(_scImputer.yLabels)
-        trainData = self.data[~self.data.exclude & ~imputed]
-
-        param_grid = {'formulas': _scFactorMdl.formulas}
-
-        self.scFactorMdl = GridSearchCV(_scFactorMdl, param_grid). \
-            fit(_scFactorMdl.createX(trainData), _scFactorMdl.createY(trainData)). \
-            best_estimator_
+        self.scFactorMdl = _scFactorMdl
+#        imputed = self.missing(_scImputer.yLabels)
+#        trainData = self.data[~self.data.exclude & ~imputed]
+#
+#        param_grid = {'formulas': _scFactorMdl.formulas}
+#
+#        self.scFactorMdl = GridSearchCV(_scFactorMdl, param_grid). \
+#            fit(_scFactorMdl.createX(trainData), _scFactorMdl.createY(trainData)). \
+#            best_estimator_
 
     def missing(self, columns):
         '''Doc String'''
