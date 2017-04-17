@@ -7,9 +7,12 @@ from statcast.bip import Bip
 from statcast.tools.plot import correlationPlot
 
 
-# %% Load data
+# %% Create Spark Context
 
 sc = SparkContext(appName="blogPost3")
+
+# %% Load data
+
 years = (2016,)
 bip = Bip(years=years, n_jobs=sc)
 
@@ -44,12 +47,6 @@ print(bip.scImputer.feature_importances_)
 
 bip.plotSCHistograms()
 
-# %% Save Park Factors
-
-parkFactors = \
-    pd.DataFrame({label:
-                  bip.scFactorMdl.factors[label]['home_team'].iloc[:, 0]
-                  for label in bip.scFactorMdl.yLabels})
-parkFactors.to_csv('Park Factors 2015-2016.csv')
+# %% Stop Spark Context
 
 sc.stop()
