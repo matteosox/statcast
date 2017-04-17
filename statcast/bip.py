@@ -56,10 +56,10 @@ _scFactorMdl = \
         xLabels=['batter', 'pitcher', 'gdTemp', 'home_team', 'scImputed'],
         yLabels=['hit_speed', 'hit_angle', 'hit_distance_sc'],
         formulas=('(1|batter) + (1|pitcher) + scImputed + (1|home_team)',
-                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
-                  '(1|home_team)',
-                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
-                  '(scImputed||home_team)',
+#                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
+#                  '(1|home_team)',
+#                  '(1|batter) + (1|pitcher) + gdTemp + scImputed + '
+#                  '(scImputed||home_team)', # TO DO: UNCOMMENT THIS SHIT!!!
                   '(1|batter) + (1|pitcher) + scImputed + '
                   '(scImputed||home_team)'))
 
@@ -211,7 +211,7 @@ class Bip():
         self.scFactorMdl = _scFactorMdl.chooseFormula(trainData,
                                                       _scFactorMdl.formulas,
                                                       n_jobs=self.n_jobs,
-                                                      cv=10)
+                                                      cv=3) # CHANGE THIS BACK TO 10!!!
 
     def missing(self, columns):
         '''Doc String'''
