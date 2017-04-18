@@ -14,87 +14,108 @@ xyMethods = ['fit', 'fit_predict', 'fit_transform', 'score', 'partial_fit']
 fitMethods = ['fit', 'fit_predict', 'fit_transform', 'partial_fit']
 
 
+def storeTrainData(clsobj, methodName):
+    '''Doc String'''
+
+    if hasattr(clsobj, methodName):
+        method = getattr(clsobj, methodName)
+        methodSig = signature(method)
+
+        def newMethod(self, X, Y=None, *args, **kwargs):
+            '''Doc String'''
+
+            self = method(self, X, Y, *args, **kwargs)
+            self.trainX_ = X.copy()
+            if Y is not None:
+                self.trainY_ = Y.copy()
+            return self
+        newMethod.__signature__ = methodSig
+        setattr(clsobj, methodName, newMethod)
+
+
+def addXMethod(clsobj, method):
+    '''Doc String'''
+
+    if hasattr(clsobj, method) and not hasattr(clsobj, method + 'D'):
+        methodSig = signature(getattr(clsobj, method))
+        methodParams = [p for p in methodSig.parameters.values()]
+        methodDParams = methodParams.copy()
+        if methodDParams[0].name != 'self':
+            methodDParams.insert(0,
+                                 Parameter('self',
+                                           Parameter.POSITIONAL_ONLY))
+        if methodDParams[1].kind is Parameter.VAR_POSITIONAL:
+            methodDParams.insert(1, Parameter('data',
+                                              Parameter.
+                                              POSITIONAL_OR_KEYWORD))
+        else:
+            methodDParams[1] = \
+                Parameter('data', Parameter.POSITIONAL_OR_KEYWORD)
+
+        methodDSig = Signature(methodDParams)
+
+        def methodD(self, data, *args, **kwargs):
+            X = self.createX(data)
+            return getattr(self, method)(X, *args, **kwargs)
+        methodD.__signature__ = methodDSig
+        setattr(clsobj, method + 'D', methodD)
+
+
+def addXYMethod(clsobj, method):
+    '''Doc String'''
+
+    if hasattr(clsobj, method) and not hasattr(clsobj, method + 'D'):
+        methodSig = signature(getattr(clsobj, method))
+        methodParams = [p for p in methodSig.parameters.values()]
+        methodDParams = methodParams.copy()
+        if methodDParams[0].name != 'self':
+            methodDParams.insert(0,
+                                 Parameter('self',
+                                           Parameter.POSITIONAL_ONLY))
+        if methodDParams[1].kind is Parameter.VAR_POSITIONAL:
+            methodDParams.insert(1, Parameter('data',
+                                              Parameter.
+                                              POSITIONAL_OR_KEYWORD))
+        else:
+            methodDParams[1] = \
+                Parameter('data', Parameter.POSITIONAL_OR_KEYWORD)
+        if methodDParams[2] is Parameter.VAR_POSITIONAL:
+            pass
+        else:
+            del methodDParams[2]
+        methodDSig = Signature(methodDParams)
+
+        def methodD(self, data, *args, **kwargs):
+            X = self.createX(data)
+            Y = self.createY(data)
+            return getattr(self, method)(X, Y, *args, **kwargs)
+        methodD.__signature__ = methodDSig
+        setattr(clsobj, method + 'D', methodD)
+
+
+def storeTrainDataFits(clsobj):
+    '''Doc String'''
+
+    for method in fitMethods:
+        storeTrainData(clsobj, method)
+
+
+def addXMethods(clsobj):
+    '''Doc String'''
+
+    for method in xMethods:
+        addXMethod(clsobj, method)
+
+
+def addXYMethods(clsobj):
+    '''Doc String'''
+
+    for method in xyMethods:
+        addXYMethod(clsobj, method)
+
+
 class BetterMetaClass(abc.ABCMeta):
     ''' Doc String'''
-
-    @staticmethod
-    def addXMethod(clsobj, method):
-        '''Doc String'''
-
-        if hasattr(clsobj, method) and not hasattr(clsobj, method + 'D'):
-            methodSig = signature(getattr(clsobj, method))
-            methodParams = [p for p in methodSig.parameters.values()]
-            methodDParams = methodParams.copy()
-            if methodDParams[0].name != 'self':
-                methodDParams.insert(0,
-                                     Parameter('self',
-                                               Parameter.POSITIONAL_ONLY))
-            if methodDParams[1].kind is Parameter.VAR_POSITIONAL:
-                methodDParams.insert(1, Parameter('data',
-                                                  Parameter.
-                                                  POSITIONAL_OR_KEYWORD))
-            else:
-                methodDParams[1] = \
-                    Parameter('data', Parameter.POSITIONAL_OR_KEYWORD)
-
-            methodDSig = Signature(methodDParams)
-
-            def methodD(self, data, *args, **kwargs):
-                X = self.createX(data)
-                return getattr(self, method)(X, *args, **kwargs)
-            methodD.__signature__ = methodDSig
-            setattr(clsobj, method + 'D', methodD)
-
-    @staticmethod
-    def addXYMethod(clsobj, method):
-        '''Doc String'''
-
-        if hasattr(clsobj, method) and not hasattr(clsobj, method + 'D'):
-            methodSig = signature(getattr(clsobj, method))
-            methodParams = [p for p in methodSig.parameters.values()]
-            methodDParams = methodParams.copy()
-            if methodDParams[0].name != 'self':
-                methodDParams.insert(0,
-                                     Parameter('self',
-                                               Parameter.POSITIONAL_ONLY))
-            if methodDParams[1].kind is Parameter.VAR_POSITIONAL:
-                methodDParams.insert(1, Parameter('data',
-                                                  Parameter.
-                                                  POSITIONAL_OR_KEYWORD))
-            else:
-                methodDParams[1] = \
-                    Parameter('data', Parameter.POSITIONAL_OR_KEYWORD)
-            if methodDParams[2] is Parameter.VAR_POSITIONAL:
-                pass
-            else:
-                del methodDParams[2]
-            methodDSig = Signature(methodDParams)
-
-            def methodD(self, data, *args, **kwargs):
-                X = self.createX(data)
-                Y = self.createY(data)
-                return getattr(self, method)(X, Y, *args, **kwargs)
-            methodD.__signature__ = methodDSig
-            setattr(clsobj, method + 'D', methodD)
-
-    @staticmethod
-    def storeTrainData(clsobj, methodName):
-        '''Doc String'''
-
-        if hasattr(clsobj, methodName):
-            method = getattr(clsobj, methodName)
-            methodSig = signature(method)
-
-            def newMethod(self, X, Y=None, *args, **kwargs):
-                '''Doc String'''
-
-                self = method(self, X, Y, *args, **kwargs)
-                self.trainX_ = X.copy()
-                if Y is not None:
-                    self.trainY_ = Y.copy()
-                return self
-            newMethod.__signature__ = methodSig
-            setattr(clsobj, methodName, newMethod)
 
     def __new__(cls, clsname, bases, clsdict):
         '''Doc String'''
@@ -149,14 +170,9 @@ class BetterMetaClass(abc.ABCMeta):
         newInit.__signature__ = newSig
         setattr(clsobj, '__init__', newInit)
 
-        for method in fitMethods:
-            cls.storeTrainData(clsobj, method)
-
-        for method in xMethods:
-            cls.addXMethod(clsobj, method)
-
-        for method in xyMethods:
-            cls.addXYMethod(clsobj, method)
+        storeTrainDataFits(clsobj)
+        addXMethods(clsobj)
+        addXYMethods(clsobj)
 
         return clsobj
 

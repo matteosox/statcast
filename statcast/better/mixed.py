@@ -134,7 +134,7 @@ class BetterLME4(BaseEstimator, RegressorMixin, BetterModel):
                                   n_jobs=n_jobs, cv=cv, refit=False). \
                 fit(self.createX(data), self.createY(data))
             formulaChoices.append(result.best_params_['formulas'])
-            self.cv_results_.append(pd.DataFrame(result.cv_results_))
+            self.cv_results_.append(result.cv_results_)
 
         self.formulas = formulaChoices
 
