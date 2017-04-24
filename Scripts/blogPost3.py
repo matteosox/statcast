@@ -4,7 +4,7 @@ import pandas as pd
 from pyspark import SparkContext
 
 from statcast.bip import Bip
-from statcast.tools.plot import correlationPlot
+#from statcast.tools.plot import correlationPlot
 
 
 # %% Create Spark Context
