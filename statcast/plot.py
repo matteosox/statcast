@@ -5,7 +5,7 @@ from .tools.plot import plotImages
 
 from . import __path__
 
-_logoPath = os.path.join(__path__[0], 'Team Logos')
+_logoPath = os.path.join(__path__[0], 'data', 'logos')
 
 
 def plotMLBLogos(X, Y, sizes=20, alphas=1, ax=None):
