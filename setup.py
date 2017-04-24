@@ -15,4 +15,4 @@ setup(name='statcast',
                    'Natural Language :: English'],
       keywords='baseball statcast mlb sabermetrics',
       packages=find_packages(),
-      package_data={'statcast': ['data/*', 'data/logos/*.png']})
+      package_data={'statcast': ['data/*.*', 'data/logos/*.png']})
