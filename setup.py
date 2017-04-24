@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name='statcast',
@@ -14,5 +14,5 @@ setup(name='statcast',
                    'Development Status :: 2 - Pre-Alpha',
                    'Natural Language :: English'],
       keywords='baseball statcast mlb sabermetrics',
-      packages='statcast',
-      package_data={'statcast': ['data/*']})
+      packages=find_packages(),
+      package_data={'statcast': ['data/*', 'data/logos/*.png']})
