@@ -40,8 +40,6 @@ class BetterLME4(BaseEstimator, RegressorMixin, BetterModel):
                                'formulas defined')
         if isinstance(self.formulas, str):
             self.formulas = (self.formulas,)
-        if isinstance(self.yLabels, str):
-            self.yLabels = (self.yLabels) * len(self.formulas)
         if len(self.formulas) != len(self.yLabels):
             if len(self.formulas) == 1:
                 self.formulas = self.formulas * len(self.yLabels)
@@ -137,6 +135,7 @@ class BetterLME4(BaseEstimator, RegressorMixin, BetterModel):
             self.cv_results_.append(result.cv_results_)
 
         self.formulas = formulaChoices
+        self.yLabels = yLabels
 
         if refit:
             self.fitD(data)
