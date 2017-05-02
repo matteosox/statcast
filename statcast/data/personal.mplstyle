@@ -1,0 +1,27 @@
+lines.linewidth   : 1.5     # line width in points
+lines.color       : 0.2    # has no affect on plot(); see axes.prop_cycle
+
+font.size           : 12
+font.sans-serif     : Helvetica Neue, Helvetica, Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Avant Garde, sans-serif
+text.color          : 0.2
+
+axes.titlesize      : 20   # fontsize of the axes title
+axes.labelsize      : 16  # fontsize of the x any y labels
+axes.labelcolor     : 0.2
+axes.edgecolor      : 0.2
+axes.prop_cycle    : cycler('color', ['4b78ca', '467c5a', '7b003d', 'e1883b', 'd9231d', 'eed180', 'd34389', '91b372', 'e7b8cf'])
+
+xtick.color          : 0.2      # color of the tick labels
+xtick.labelsize      : 12 # fontsize of the tick labels
+
+ytick.color          : 0.2      # color of the tick labels
+ytick.labelsize      : 12 # fontsize of the tick labels
+
+legend.fontsize      : 16
+legend.handletextpad : 0.4
+legend.handlelength  : 1.5
+
+figure.figsize   : 10.21, 5.71    # figure size in inches
+figure.titlesize : 20
+
+savefig.dpi         : 125      # figure dots per inch

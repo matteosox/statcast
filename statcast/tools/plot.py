@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -14,10 +16,10 @@ else:
 
 from ..better.kde import BetterKernelDensity
 
-try:
-    plt.style.use('personal')
-except:
-    pass
+from . import __path__
+
+plt.style.use(os.path.join(os.path.dirname(__path__[0]),
+                           'data', 'blackontrans.mplstyle'))
 
 
 def correlationPlot(Y, Yp, labels=None, units=None, **plotParams):
