@@ -238,6 +238,8 @@ class Bip():
         testYp = self.scImputer.predictD(testData).T
         imputeY = self.scImputer.predictD(imputeData).T
 
+        del inds, trainInds, testInds, testData, imputeData
+
         name = 'bandwidths{}.csv'.format('_'.join(str(year)
                                                   for year in self.years))
 
@@ -257,10 +259,12 @@ class Bip():
                     param_grid = {'bandwidth': np.logspace(-3, -1, num=20) *
                                   (xmax - xmin)}
                     trainGrid = \
-                        GridSearchCV(kde, param_grid, cv=10,
+                        GridSearchCV(kde, param_grid, cv=10, refit=False,
                                      n_jobs=self.n_jobs).fit(subData[:, None])
                     bandwidths.loc[row, col] = \
                         trainGrid.best_params_['bandwidth']
+                    del trainGrid, kde, subData
+                del data
             try:
                 bandwidths.to_csv(os.path.join(_storagePath, name))
             except PermissionError:
@@ -272,6 +276,7 @@ class Bip():
 
             fig, kde = plotKDHist(trainy, kernel='gaussian',
                                   bandwidth=bandwidths.loc[yLabel, 'test'])
+            del kde
             ax = fig.gca()
             plotKDHist(trainyp, kernel='gaussian', ax=ax,
                        bandwidth=bandwidths.loc[yLabel, 'testP'])

@@ -109,20 +109,19 @@ def plotKDHist(data,
     '''Doc String'''
 
     if data.ndim < 2:
-        fitData = data[:, None]
-    else:
-        fitData = data
+        data = data[:, None]
     xmin, xmax = min(data), max(data)
     xFit = np.linspace(xmin, xmax, 1e3)
 
     if bandwidth is None:
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4)
         parameters = {'bandwidth': np.logspace(-3, -1, num=10) * (xmax - xmin)}
-        trainGrid = GridSearchCV(kde, parameters, cv=3, n_jobs=-1).fit(fitData)
+        trainGrid = GridSearchCV(kde, parameters, cv=3, n_jobs=-1).fit(data)
         kde = trainGrid.best_estimator_
+        del trainGrid
     else:
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
-                                  bandwidth=bandwidth).fit(fitData)
+                                  bandwidth=bandwidth).fit(data)
 
     fitL, fitU = kde.confidence(xFit[:, None], alpha=alpha)
 

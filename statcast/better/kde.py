@@ -26,11 +26,10 @@ class BetterKernelDensity(KernelDensity, BetterModel):
     def _se(self, X):
         '''Doc String'''
 
-        trainData = self.tree_.data
-        n = self.tree_.data.shape[0]
+        n = self.trainX_.shape[0]
 
         Y = np.array([self._kernelFunction(X - row)
-                     for row in trainData])
+                     for row in self.trainX_])
         s2 = Y.var(axis=0, ddof=1)
         return np.sqrt(s2 / n)
 
@@ -43,8 +42,7 @@ class BetterKernelDensity(KernelDensity, BetterModel):
         '''Doc String'''
 
         X = check_array(X)
-        trainData = np.array(self.tree_.data)
-        a, b = trainData.min(), trainData.max()
+        a, b = self.trainX_.min(), self.trainX_.max()
         if self.kernel == 'gaussian':
             w = 3
         elif self.kernel == 'exponential':
