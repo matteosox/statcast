@@ -17,7 +17,10 @@ sc = SparkContext(appName="post5")
 years = (2015, 2016)
 
 for year in years:
-    bip = Bip(years=(year,), n_jobs=sc)
+    bip = Bip(years=(year,), n_jobs=sc,
+              scImputerName='new', scFactorMdlName='new')
+    bip.scImputer.save()
+    bip.scFactorMdl.save()
     bip.plotSCHistograms()
 
 # %% Transfer results to S3

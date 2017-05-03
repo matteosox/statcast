@@ -261,7 +261,10 @@ class Bip():
                                      n_jobs=self.n_jobs).fit(subData[:, None])
                     bandwidths.loc[row, col] = \
                         trainGrid.best_params_['bandwidth']
-                    bandwidths.to_csv(os.path.join(_storagePath, name))
+            try:
+                bandwidths.to_csv(os.path.join(_storagePath, name))
+            except PermissionError:
+                bandwidths.to_csv(name)
 
         for trainy, trainyp, imputey, label, unit, yLabel in \
             zip(testY, testYp, imputeY, labels, units,
