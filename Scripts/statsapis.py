@@ -22,6 +22,19 @@ game_pk = 487637
 r = requests.get(baseUrl.format(game_pk))
 data = json.load(io.StringIO(r.text))
 
+# %%
+
+import requests
+
+
+baseUrl = 'http://statsapi.mlb.com/api/v1/game/{!s}/feed/color'
+game_pk = 487637
+
+r = requests.get(baseUrl.format(game_pk))
+data = r.json()
+items = data['items']
+
+
 #%%
 
 try:

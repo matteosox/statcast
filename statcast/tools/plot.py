@@ -111,7 +111,7 @@ def plotKDHist(data,
     if data.ndim < 2:
         data = data[:, None]
     xmin, xmax = min(data), max(data)
-    xFit = np.linspace(xmin, xmax, 1e3)
+    
 
     if bandwidth is None:
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4)
@@ -123,10 +123,11 @@ def plotKDHist(data,
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
                                   bandwidth=bandwidth).fit(data)
 
+    xFit = np.linspace(xmin - 3 * kde.bandwidth, xmax + 3 * kde.bandwidth, 1e3)
     fitL, fitU = kde.confidence(xFit[:, None], alpha=alpha)
 
     if ax is not None:
-        ax.fill_between(xFit, fitU, fitL, alpha=0.35, lw=0,
+        ax.fill_between(xFit, fitU * 100, fitL * 100, alpha=0.35, lw=0,
                         label='{:.0f}% Confidence Interval'.
                         format(1e2 * (1 - alpha)))
         return ax, kde
@@ -143,7 +144,7 @@ def plotKDHist(data,
         pass
 
     ax.set_ylabel('Probability Density (%)')
-    ax.set_xlim(left=xmin, right=xmax)
+    ax.set_xlim(left=xmin - 3 * kde.bandwidth, right=xmax + 3 * kde.bandwidth)
     ax.set_ylim(bottom=0, auto=True)
     return fig, kde
 
