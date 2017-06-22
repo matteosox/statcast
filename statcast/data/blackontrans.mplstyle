@@ -27,4 +27,4 @@ figure.titlesize : 20
 figure.facecolor : 0.0667
 
 savefig.dpi         : 125      # figure dots per inch
-savefig.transparent : True
+savefig.facecolor   : 0.0667

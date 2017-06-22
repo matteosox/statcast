@@ -8,20 +8,40 @@ from scipy import stats
 from .base import BetterModel
 
 
+def gaussian(X, h):
+    return stats.norm.pdf(X / h).prod(1) / h
+
+
+def tophat(X, h):
+    return ((np.abs(X / h) < 1) / 2).prod(1) / h
+
+
+def epanechnikov(X, h):
+    return ((np.abs(X / h) < 1) * 3 / 4 * (1 - (X / h) ** 2)).prod(1) / h
+
+
+def exponential(X, h):
+    return (np.exp(-np.abs(X / h)) / 2).prod(1) / h
+
+
+def linear(X, h):
+    return ((np.abs(X / h) < 1) * (1 - np.abs(X / h))).prod(1) / h
+
+
+def cosine(X, h):
+    return ((np.abs(X / h) < 1) *
+            np.cos(X / h * np.pi / 2)).prod(1) / h * np.pi / 4
+
+kernelFunctions = {'gaussian': gaussian,
+                   'tophat': tophat,
+                   'epanechnikov': epanechnikov,
+                   'exponential': exponential,
+                   'linear': linear,
+                   'cosine': cosine}
+
+
 class BetterKernelDensity(KernelDensity, BetterModel):
     '''Doc String'''
-
-    def _kernelFunction(self, X):
-        '''Doc String'''
-
-        if not hasattr(self, '_kde'):
-            self._kde = \
-                self.__class__(**self.get_params()).fit(np.zeros((1, 1)))
-        elif not self.get_params() == self._kde.get_params():
-            self._kde.set_params(**self.get_params())
-        elif not X.shape[1] == self._kde.tree_.data.shape[1]:
-            self._kde.fit(np.zeros((1, X.shape[1])))
-        return np.exp(self._kde.score_samples(X))
 
     def _se(self, X):
         '''Doc String'''
@@ -61,3 +81,8 @@ class BetterKernelDensity(KernelDensity, BetterModel):
 
         X = self.createX(data)
         return self.confidence(X, alpha)
+
+    def _kernelFunction(self, X):
+        '''Doc String'''
+
+        return kernelFunctions[self.kernel](X, self.bandwidth)
