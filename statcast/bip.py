@@ -10,8 +10,6 @@ from .better.randomforest import TreeSelectingRFRegressor
 from .better.mixed import BetterLME4
 from .better.utils import findTrainSplit, otherRFE
 from .tools.plot import plotKDHist
-from .better.kde import BetterKernelDensity
-from .better.spark import GridSearchCV
 
 from . import __path__
 
@@ -135,7 +133,6 @@ class Bip():
         self.data['scImputed'] = self.missing(_scImputer.yLabels)
 
         self.data.fillna(self.data.median(), inplace=True)
-        return
 
     def _imputeSCData(self):
         '''Doc String'''
@@ -150,8 +147,6 @@ class Bip():
                 imputeY.loc[imputeThisCol[~self.data.exclude &
                                           self.data.scImputed].values,
                             label].values
-
-        return
 
     def _initSCImputer(self, scImputerName=None):
         '''Doc String'''
@@ -246,42 +241,39 @@ class Bip():
         try:
             bandwidths = pd.read_csv(os.path.join(_storagePath, name),
                                      index_col=0)
+            saveFlag = False
         except FileNotFoundError:
-            bandwidths = pd.DataFrame({'test': True,
-                                       'testP': True,
-                                       'impute': True},
+            bandwidths = pd.DataFrame({'test': None,
+                                       'testP': None,
+                                       'impute': None},
                                       index=self.scImputer.yLabels)
-            for data, col in zip([testY, testYp, imputeY],
-                                 ['test', 'testP', 'impute']):
-                for subData, row in zip(data, self.scImputer.yLabels):
-                    xmin, xmax = min(subData), max(subData)
-                    kde = BetterKernelDensity(kernel='gaussian', rtol=1e-4)
-                    param_grid = {'bandwidth': np.logspace(-3, -1, num=20) *
-                                  (xmax - xmin)}
-                    trainGrid = \
-                        GridSearchCV(kde, param_grid, cv=10, refit=False,
-                                     n_jobs=self.n_jobs).fit(subData[:, None])
-                    bandwidths.loc[row, col] = \
-                        trainGrid.best_params_['bandwidth']
-                    del trainGrid, kde, subData
-                del data
-            try:
-                bandwidths.to_csv(os.path.join(_storagePath, name))
-            except PermissionError:
-                bandwidths.to_csv(name)
+            saveFlag = True
 
         for trainy, trainyp, imputey, label, unit, yLabel in \
             zip(testY, testYp, imputeY, labels, units,
                 self.scImputer.yLabels):
 
             fig, kde = plotKDHist(trainy, kernel='gaussian',
-                                  bandwidth=bandwidths.loc[yLabel, 'test'])
+                                  bandwidth=bandwidths.loc[yLabel, 'test'],
+                                  cv=10, n_jobs=self.n_jobs)
+            if saveFlag:
+                bandwidths.loc[yLabel, 'test'] = kde.bandwidth
             del kde
             ax = fig.gca()
-            plotKDHist(trainyp, kernel='gaussian', ax=ax,
-                       bandwidth=bandwidths.loc[yLabel, 'testP'])
-            plotKDHist(imputey, kernel='gaussian', ax=ax,
-                       bandwidth=bandwidths.loc[yLabel, 'impute'])
+
+            ax, kde = plotKDHist(trainyp, kernel='gaussian', ax=ax,
+                                 bandwidth=bandwidths.loc[yLabel, 'testP'],
+                                 cv=10, n_jobs=self.n_jobs)
+            if saveFlag:
+                bandwidths.loc[yLabel, 'testP'] = kde.bandwidth
+            del kde
+
+            ax, kde = plotKDHist(imputey, kernel='gaussian', ax=ax,
+                                 bandwidth=bandwidths.loc[yLabel, 'impute'],
+                                 cv=10, n_jobs=self.n_jobs)
+            if saveFlag:
+                bandwidths.loc[yLabel, 'impute'] = kde.bandwidth
+            del kde
 
             ax.set_xlim(left=min(trainy.min(), trainyp.min(), imputey.min()),
                         right=max(trainy.max(), trainyp.max(), imputey.max()))
@@ -295,3 +287,8 @@ class Bip():
             fig.savefig('{} {} Histogram'.
                         format(', '.join(str(year) for year in self.years),
                                label))
+        if saveFlag:
+            try:
+                bandwidths.to_csv(os.path.join(_storagePath, name))
+            except PermissionError:
+                bandwidths.to_csv(name)

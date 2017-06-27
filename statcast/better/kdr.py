@@ -1,6 +1,7 @@
 from inspect import signature
 
 import numpy as np
+import pandas as pd
 
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.neighbors.kde import KernelDensity
@@ -11,6 +12,7 @@ from scipy import stats
 
 from .base import BetterModel
 from .kde import BetterKernelDensity
+from .spark import GridSearchCV
 
 
 class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
@@ -99,14 +101,25 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
         X = self.createX(data)
         return self.confidence(X, alpha)
 
-    def selectBandwidth(self, bandwidths=None):
+    def selectBandwidth(self, bandwidths=None, n_jobs=1, cv=None):
         '''Doc String'''
 
         if bandwidths is None:
             xmins, xmaxs = self.trainX_.min(0), self.trainX_.max(0)
             bandwidths = np.logspace(-3, -1, num=10) * (xmaxs - xmins).max()
 
-        risks = np.array([self.set_params(bandwidth=bandwidth).risk()
-                          for bandwidth in bandwidths])
-        self.bandwidth = bandwidths[np.argmin(risks)]
+        # Leave one out cross-validation
+        if cv == -1:
+            risks = np.array([self.set_params(bandwidth=bandwidth).risk()
+                              for bandwidth in bandwidths])
+            self.bandwidth = bandwidths[np.argmin(risks)]
+            self.cv_results_ = pd.DataFrame({'bandwidth': bandwidths,
+                                             'risk': risks})
+            return self
+
+        parameters = {'bandwidth': bandwidths}
+        trainGrid = GridSearchCV(self, parameters, cv=cv,
+                                 n_jobs=n_jobs, refit=False).fit(self.trainX_)
+        self.bandwidth = trainGrid.best_estimator_.bandwidth
+        self.cv_results_ = trainGrid.cv_results_
         return self

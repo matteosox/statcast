@@ -6,6 +6,7 @@ from sklearn.utils.validation import check_array
 from scipy import stats
 
 from .base import BetterModel
+from .spark import GridSearchCV
 
 
 def gaussian(X, h):
@@ -86,3 +87,17 @@ class BetterKernelDensity(KernelDensity, BetterModel):
         '''Doc String'''
 
         return kernelFunctions[self.kernel](X, self.bandwidth)
+
+    def selectBandwidth(self, bandwidths=None, n_jobs=1, cv=None):
+        '''Doc String'''
+
+        if bandwidths is None:
+            xmins, xmaxs = self.trainX_.min(0), self.trainX_.max(0)
+            bandwidths = np.logspace(-3, -1, num=10) * (xmaxs - xmins).max()
+
+        parameters = {'bandwidth': bandwidths}
+        trainGrid = GridSearchCV(self, parameters, cv=cv,
+                                 n_jobs=n_jobs, refit=False).fit(self.trainX_)
+        self.bandwidth = trainGrid.best_estimator_.bandwidth
+        self.cv_results_ = trainGrid.cv_results_
+        return self

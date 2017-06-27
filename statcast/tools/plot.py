@@ -5,7 +5,6 @@ import pandas as pd
 from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib import lines as mlines
-from sklearn.model_selection import GridSearchCV
 
 try:
     from PIL import Image as pilimg
@@ -104,21 +103,17 @@ def addText(ax, text, loc='best', **kwargs):
     return
 
 
-def plotKDHist(data,
-               kernel='epanechnikov', bandwidth=None, alpha=5e-2, ax=None):
+def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
+               ax=None, n_jobs=1, cv=None):
     '''Doc String'''
 
     if data.ndim < 2:
         data = data[:, None]
     xmin, xmax = min(data), max(data)
-    
 
     if bandwidth is None:
-        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4)
-        parameters = {'bandwidth': np.logspace(-3, -1, num=10) * (xmax - xmin)}
-        trainGrid = GridSearchCV(kde, parameters, cv=3, n_jobs=-1).fit(data)
-        kde = trainGrid.best_estimator_
-        del trainGrid
+        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4).fit(data)
+        kde.selectBandwidth(n_jobs=n_jobs, cv=cv)
     else:
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
                                   bandwidth=bandwidth).fit(data)
