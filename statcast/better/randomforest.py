@@ -46,7 +46,7 @@ class BetterRandomForestRegressor(RandomForestRegressor, BetterModel):
 
         X = pd.DataFrame()
         for xLabel in self.xLabels:
-            if data[xLabel].dtype is pd.types.dtypes.CategoricalDtype():
+            if data[xLabel].dtype is pd.api.types.CategoricalDtype():
                 for cat in data[xLabel].cat.categories:
                     X[xLabel + '|' + str(cat)] = data[xLabel] == cat
                 X[xLabel + '|' + 'null'] = data[xLabel].isnull()

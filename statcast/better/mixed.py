@@ -66,7 +66,7 @@ class BetterLME4(BaseEstimator, RegressorMixin, BetterModel):
 
         X = data[self.xLabels].copy()
         for xLabel in self.xLabels:
-            if X[xLabel].dtype is pd.types.dtypes.CategoricalDtype():
+            if X[xLabel].dtype is pd.api.types.CategoricalDtype():
                 X[xLabel] = X[xLabel].astype(X[xLabel].cat.categories.dtype)
 
         return X
