@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import numpy as np
+from matplotlib.lines import Line2D
 
 from .database.bbsavant import DB as SavantDB
 from .database.gd_weather import DB as WeatherDB
@@ -153,7 +154,7 @@ class Bip():
 
         if scImputerName == 'new':
             self._createSCImputer()
-        elif scImputerName:
+        elif scImputerName is not None:
             self.scImputer = _scImputer.load(scImputerName)
         else:
             name = 'scImputer{}'.format('_'.join(str(year)
@@ -164,8 +165,11 @@ class Bip():
             except FileNotFoundError:
                 self._createSCImputer()
                 self.scImputer.name = name
-                self.scImputer.save(os.path.join(_storagePath,
-                                                 self.scImputer.name))
+                try:
+                    self.scImputer.save(os.path.join(_storagePath,
+                                                     self.scImputer.name))
+                except PermissionError:
+                        self.scImputer.save(self.scImputer.name)
 
     def _createSCImputer(self):
         '''Doc String'''
@@ -184,7 +188,7 @@ class Bip():
 
         if scFactorMdlName == 'new':
             self._createSCFactorMdl()
-        elif scFactorMdlName:
+        elif scFactorMdlName is not None:
             self.scFactorMdl = _scFactorMdl.load(scFactorMdlName)
         else:
             name = 'scFactorMdl{}'.format('_'.join(str(year)
@@ -195,8 +199,11 @@ class Bip():
             except FileNotFoundError:
                 self._createSCFactorMdl()
                 self.scFactorMdl.name = name
-                self.scFactorMdl.save(os.path.join(_storagePath,
-                                                   self.scFactorMdl.name))
+                try:
+                    self.scFactorMdl.save(os.path.join(_storagePath,
+                                                       self.scFactorMdl.name))
+                except PermissionError:
+                    self.scFactorMdl.save(self.scFactorMdl.name)
 
     def _createSCFactorMdl(self):
         '''Doc String'''
@@ -249,11 +256,11 @@ class Bip():
                                       index=self.scImputer.yLabels)
             saveFlag = True
 
-        for trainy, trainyp, imputey, label, unit, yLabel in \
+        for testy, testyp, imputey, label, unit, yLabel in \
             zip(testY, testYp, imputeY, labels, units,
                 self.scImputer.yLabels):
 
-            fig, kde = plotKDHist(trainy, kernel='gaussian',
+            fig, kde = plotKDHist(testy,
                                   bandwidth=bandwidths.loc[yLabel, 'test'],
                                   cv=10, n_jobs=self.n_jobs)
             if saveFlag:
@@ -261,26 +268,29 @@ class Bip():
             del kde
             ax = fig.gca()
 
-            ax, kde = plotKDHist(trainyp, kernel='gaussian', ax=ax,
+            ax, kde = plotKDHist(testyp, ax=ax,
                                  bandwidth=bandwidths.loc[yLabel, 'testP'],
                                  cv=10, n_jobs=self.n_jobs)
             if saveFlag:
                 bandwidths.loc[yLabel, 'testP'] = kde.bandwidth
             del kde
 
-            ax, kde = plotKDHist(imputey, kernel='gaussian', ax=ax,
+            ax, kde = plotKDHist(imputey, ax=ax,
                                  bandwidth=bandwidths.loc[yLabel, 'impute'],
                                  cv=10, n_jobs=self.n_jobs)
             if saveFlag:
                 bandwidths.loc[yLabel, 'impute'] = kde.bandwidth
             del kde
 
-            ax.set_xlim(left=min(trainy.min(), trainyp.min(), imputey.min()),
-                        right=max(trainy.max(), trainyp.max(), imputey.max()))
+            ax.set_xlim(left=min(testy.min(), testyp.min(), imputey.min()),
+                        right=max(testy.max(), testyp.max(), imputey.max()))
             ax.set_ylim(bottom=0, auto=True)
 
             ax.set_xlabel(label + ' ({})'.format(unit))
-            ax.legend(labels=('Test Data',
+            lines = [child for child in ax.get_children()
+                     if isinstance(child, Line2D)]
+            ax.legend(handles=lines,
+                      labels=('Test Data',
                               'Test Data Imputed',
                               'Missing Data Imputed'), loc='best')
 

@@ -119,9 +119,11 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
                                   bandwidth=bandwidth).fit(data)
 
     xFit = np.linspace(xmin - kde.bandwidth, xmax + kde.bandwidth, 1e3)
+    yFit = kde.predict(xFit[:, None])
     fitL, fitU = kde.confidence(xFit[:, None], alpha=alpha)
 
     if ax is not None:
+        ax.plot(xFit, yFit * 100)
         ax.fill_between(xFit, fitU * 100, fitL * 100, alpha=0.35, lw=0,
                         label='{:.0f}% Confidence Interval'.
                         format(1e2 * (1 - alpha)))
@@ -129,7 +131,8 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    ax.fill_between(xFit, fitU, fitL, alpha=0.35, lw=0,
+    ax.plot(xFit, yFit * 100)
+    ax.fill_between(xFit, fitU * 100, fitL * 100, alpha=0.35, lw=0,
                     label='{:.0f}% Confidence Interval'.
                     format(1e2 * (1 - alpha)))
 
@@ -139,7 +142,7 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
         pass
 
     ax.set_ylabel('Probability Density (%)')
-    ax.set_xlim(left=xmin - 3 * kde.bandwidth, right=xmax + 3 * kde.bandwidth)
+    ax.set_xlim(left=xmin - kde.bandwidth, right=xmax + kde.bandwidth)
     ax.set_ylim(bottom=0, auto=True)
     return fig, kde
 

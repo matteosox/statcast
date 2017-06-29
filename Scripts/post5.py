@@ -1,6 +1,7 @@
 # %% Imports
 
 import os
+import datetime
 
 import requests
 from pyspark import SparkContext
@@ -17,17 +18,16 @@ sc = SparkContext(appName="post5")
 years = (2015, 2016)
 
 for year in years:
-    bip = Bip(years=(year,), n_jobs=sc,
-              scImputerName='new', scFactorMdlName='new')
-    bip.scImputer.save()
-    bip.scFactorMdl.save()
+    bip = Bip(years=(year,), n_jobs=sc)
     bip.plotSCHistograms()
 
 # %% Transfer results to S3
 
 instanceID = requests. \
         get('http://169.254.169.254/latest/meta-data/instance-id').text
-os.system('aws s3 sync . s3://mf-first-bucket/output/{}'.format(instanceID))
+dtStr = datetime.datetime.utcnow().strftime('%Y-%m-%d--%H-%M-%S')
+os.system('aws s3 sync . s3://mf-first-bucket/output/{}/{}'.
+          format(instanceID, dtStr))
 
 # %% Stop Spark Context
 

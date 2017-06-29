@@ -25,6 +25,7 @@ legend.handlelength  : 1.5
 figure.figsize   : 10.21, 5.71    # figure size in inches
 figure.titlesize : 20
 figure.facecolor : 0.0667
+figure.dpi       : 125
 
 savefig.dpi         : 125      # figure dots per inch
-savefig.facecolor   : 0.0667
+savefig.transparent : True
