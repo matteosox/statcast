@@ -118,7 +118,7 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
                                   bandwidth=bandwidth).fit(data)
 
-    xFit = np.linspace(xmin - 3 * kde.bandwidth, xmax + 3 * kde.bandwidth, 1e3)
+    xFit = np.linspace(xmin - kde.bandwidth, xmax + kde.bandwidth, 1e3)
     fitL, fitU = kde.confidence(xFit[:, None], alpha=alpha)
 
     if ax is not None:

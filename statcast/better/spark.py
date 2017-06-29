@@ -26,7 +26,9 @@ class GridSearchCV(model_selection.GridSearchCV):
         '''Doc String'''
 
         if isinstance(self.n_jobs, int):
-            return super().fit(X, y, groups)
+            super().fit(X, y, groups)
+            self.cv_results_ = pd.DataFrame(self.cv_results_)
+            return self
         elif sparkRuns:
             if not isinstance(self.n_jobs, pyspark.SparkContext):
                 raise RuntimeError('n_jobs parameter was not an int, meaning '

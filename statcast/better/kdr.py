@@ -43,11 +43,13 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
 
         self._flowParams()
         num = np.hstack([self.kde._kernelFunction(np.tile(
-            row, (self.trainX_.shape[0], 1)) - self.trainX_)[:, None]
-            for row in X]).T
+            row, (self.trainX_.shape[0], 1)) - self.trainX_) for row in X]).T
         den = np.tile(self.kde.predict(X)[:, None] *
                       self.trainX_.shape[0], (1, self.trainX_.shape[0]))
-        return num / den
+        den[den == 0] = 1
+        W = num / den
+        W[(W == 0).all(1), :] = 1 / self.trainX_.shape[0]
+        return W
 
     def predict(self, X):
         '''Doc String'''
@@ -74,7 +76,10 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
                                 self.trainX_.shape[0]),
                       (1, self.trainY_.shape[1]))
         num = self.trainY_ - self.predict(self.trainX_)
-        return ((num / den) ** 2).mean(0)
+        risk = ((num / den) ** 2).mean()
+        if np.isnan(risk):
+            risk = np.inf
+        return risk
 
     def confidence(self, X, alpha=0.05):
         '''Doc String'''
@@ -112,14 +117,17 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
         if cv == -1:
             risks = np.array([self.set_params(bandwidth=bandwidth).risk()
                               for bandwidth in bandwidths])
-            self.bandwidth = bandwidths[np.argmin(risks)]
             self.cv_results_ = pd.DataFrame({'bandwidth': bandwidths,
                                              'risk': risks})
+            if not np.isfinite(bandwidths[np.argmin(risks)]):
+                raise RuntimeError('No bandwidths had finite risks, '
+                                   'try larger, or use cross validation.')
+            self.bandwidth = bandwidths[np.argmin(risks)]
             return self
 
         parameters = {'bandwidth': bandwidths}
-        trainGrid = GridSearchCV(self, parameters, cv=cv,
-                                 n_jobs=n_jobs, refit=False).fit(self.trainX_)
-        self.bandwidth = trainGrid.best_estimator_.bandwidth
+        trainGrid = GridSearchCV(self, parameters, cv=cv, n_jobs=n_jobs,
+                                 refit=False).fit(self.trainX_, self.trainY_)
+        self.bandwidth = trainGrid.best_params_['bandwidth']
         self.cv_results_ = trainGrid.cv_results_
         return self
