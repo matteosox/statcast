@@ -76,7 +76,8 @@ def correlationPlot(Y, Yp, labels=None, units=None, **plotParams):
         axLims[0] = axLims[2] = min(axLims[0::2])
         axLims[1] = axLims[3] = max(axLims[1::2])
         ax.axis(axLims)
-        ax.plot(axLims[:2], axLims[2:], '--', color='0.1', linewidth=1)
+        ax.plot(axLims[:2], axLims[2:],
+                '--', color=plt.rcParams['lines.color'], linewidth=1)
 
         labels = ['{}: {:.2f}'.format(name, stat)
                   for name, stat in zip(['RMSE', 'R2', 'MAE'],
