@@ -22,7 +22,7 @@ class BetterRandomForestRegressor(RandomForestRegressor, BetterModel):
             return super().feature_importances_
         ftImps = pd.Series()
         ftImpsComplete = pd.Series(super().feature_importances_,
-                                   index=self.trainX_.columns). \
+                                   index=self.colNames_). \
             sort_values(ascending=False)
 
         for xLabel in self.xLabels:
@@ -54,6 +54,20 @@ class BetterRandomForestRegressor(RandomForestRegressor, BetterModel):
                 X[xLabel] = data[xLabel]
 
         return X
+
+    def fit(self, X, y, sample_weight=None):
+        '''Doc String'''
+
+        if self.xLabels:
+            try:
+                self.colNames_ = list(X.columns)
+            except:
+                warnings.warn('Feature importances may not work when using a '
+                              'better model with labels, but calling fit',
+                              UserWarning)
+                self.colNames_ = self.xLabels
+
+        return super().fit(X, y, sample_weight)
 
     def _set_oob_score(self, X, Y):
         '''Doc String'''

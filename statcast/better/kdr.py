@@ -1,7 +1,6 @@
 from inspect import signature
 
 import numpy as np
-import pandas as pd
 
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.neighbors.kde import KernelDensity
@@ -12,7 +11,6 @@ from scipy import stats
 
 from .base import BetterModel
 from .kde import BetterKernelDensity
-from .spark import GridSearchCV
 
 
 class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
@@ -31,30 +29,35 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
         self._flowParams()
         check_X_y(X, Y, multi_output=True, dtype=None)
         self.kde.fit(X)
+        self.trainY_ = Y.copy()
         return self
 
-    def _flowParams(self):
+    def _flowParams(self, up=False):
         '''Doc String'''
 
-        self.kde.set_params(**self.get_params())
+        if up:
+            self.set_params(**self.kde.get_params())
+        else:
+            self.kde.set_params(**self.get_params())
 
     def _weights(self, X):
         '''Doc String'''
 
         self._flowParams()
+        trainX = np.array(self.kde.tree_.data)
         num = np.hstack([self.kde._kernelFunction(np.tile(
-            row, (self.trainX_.shape[0], 1)) - self.trainX_) for row in X]).T
+            row, (trainX.shape[0], 1)) - trainX) for row in X]).T
         den = np.tile(self.kde.predict(X)[:, None] *
-                      self.trainX_.shape[0], (1, self.trainX_.shape[0]))
+                      trainX.shape[0], (1, trainX.shape[0]))
         den[den == 0] = 1
         W = num / den
-        W[(W == 0).all(1), :] = 1 / self.trainX_.shape[0]
+        W[(W == 0).all(1), :] = 1 / trainX.shape[0]
         return W
 
     def predict(self, X):
         '''Doc String'''
 
-        check_is_fitted(self, ['trainX_', 'trainY_'])
+        check_is_fitted(self, ['trainY_'])
         check_array(X, dtype=None)
         W = self._weights(X)
         return W.dot(self.trainY_)
@@ -70,12 +73,14 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
     def risk(self):
         '''Doc String'''
 
+        check_is_fitted(self, ['trainY_'])
         self._flowParams()
-        k0 = self.kde._kernelFunction(np.zeros((1, self.trainX_.shape[1])))
-        den = np.tile(1 - k0 / (self.kde.predict(self.trainX_)[:, None] *
-                                self.trainX_.shape[0]),
+        trainX = np.array(self.kde.tree_.data)
+        k0 = self.kde._kernelFunction(np.zeros((1, trainX.shape[1])))
+        den = np.tile(1 - k0 / (self.kde.predict(trainX)[:, None] *
+                                trainX.shape[0]),
                       (1, self.trainY_.shape[1]))
-        num = self.trainY_ - self.predict(self.trainX_)
+        num = self.trainY_ - self.predict(trainX)
         risk = ((num / den) ** 2).mean()
         if np.isnan(risk):
             risk = np.inf
@@ -84,15 +89,19 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
     def confidence(self, X, alpha=0.05):
         '''Doc String'''
 
+        check_is_fitted(self, ['trainY_'])
+        trainX = np.array(self.kde.tree_.data)
         X = check_array(X)
-        a, b = self.trainX_.min(), self.trainX_.max()
+        a, b = trainX.min(0), trainX.max(0)
         if self.kernel == 'gaussian':
-            w = 3
+            w = 6
         elif self.kernel == 'exponential':
-            w = 2 * stats.expon.ppf(2 * (stats.norm.cdf(1.5) - 0.5))
+            w = 2 * stats.expon.ppf(2 * (stats.norm.cdf(3) - 0.5))
         else:
             w = 2
-        m = (b - a) / (w * self.bandwidth)
+        m = np.prod(b - a) / (w * self.bandwidth) ** X.shape[1]
+        if self.normalize:
+            m *= self.kde.detH_
         q = stats.norm.ppf((1 + (1 - alpha) ** (1 / m)) / 2)
 
         f = self.predict(X)
@@ -109,25 +118,7 @@ class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
     def selectBandwidth(self, bandwidths=None, n_jobs=1, cv=None):
         '''Doc String'''
 
-        if bandwidths is None:
-            xmins, xmaxs = self.trainX_.min(0), self.trainX_.max(0)
-            bandwidths = np.logspace(-3, -1, num=10) * (xmaxs - xmins).max()
-
-        # Leave one out cross-validation
-        if cv == -1:
-            risks = np.array([self.set_params(bandwidth=bandwidth).risk()
-                              for bandwidth in bandwidths])
-            self.cv_results_ = pd.DataFrame({'bandwidth': bandwidths,
-                                             'risk': risks})
-            if not np.isfinite(bandwidths[np.argmin(risks)]):
-                raise RuntimeError('No bandwidths had finite risks, '
-                                   'try larger, or use cross validation.')
-            self.bandwidth = bandwidths[np.argmin(risks)]
-            return self
-
-        parameters = {'bandwidth': bandwidths}
-        trainGrid = GridSearchCV(self, parameters, cv=cv, n_jobs=n_jobs,
-                                 refit=False).fit(self.trainX_, self.trainY_)
-        self.bandwidth = trainGrid.best_params_['bandwidth']
-        self.cv_results_ = trainGrid.cv_results_
+        self._flowParams()
+        self.kde.selectBandwidth(bandwidths, n_jobs, cv)
+        self._flowParams(up=True)
         return self

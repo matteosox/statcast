@@ -13,6 +13,8 @@ except ImportError:
 else:
     imaging = True
 
+from sklearn.metrics import precision_recall_curve
+
 from ..better.kde import BetterKernelDensity
 
 from . import __path__
@@ -146,6 +148,153 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
     ax.set_xlim(left=xmin - kde.bandwidth, right=xmax + kde.bandwidth)
     ax.set_ylim(bottom=0, auto=True)
     return fig, kde
+
+
+def plotPrecRec(y, yp, ax=None, label=None):
+    '''Doc String'''
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
+    if y.shape[0] != yp.shape[0]:
+        raise Exception('Number of rows in y & yp must match')
+
+    prec, rec, _ = precision_recall_curve(y, yp)
+
+    ax.plot(rec, prec, label=label)
+    ax.set_xlabel('Recall')
+    ax.set_ylabel('Precision')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+
+    try:
+        return fig
+    except:
+        return ax
+
+
+def plotPrecRecMN(y, yp, ax=None, labels=None):
+    '''Doc String'''
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
+    if y is not pd.api.types.CategoricalDtype():
+        y = pd.Series(y).astype('category')
+
+    if y.cat.categories.shape[0] != yp.shape[1]:
+        raise Exception('Number of categories in y must match number of '
+                        'columns in yp')
+    elif y.shape[0] != yp.shape[0]:
+        raise Exception('Number of rows in y & yp must match')
+
+    prec = {}
+    rec = {}
+    Y = []
+
+    for i, cat in enumerate(y.cat.categories):
+        yi = y == cat
+        Y.append(yi)
+        prec[cat], rec[cat], _ = precision_recall_curve(yi, yp[:, i])
+
+    Y = np.array(Y)
+    prec['micro'], rec['micro'], _ = \
+        precision_recall_curve(Y.ravel(), yp.ravel())
+
+    ax.plot(rec['micro'], prec['micro'], label='micro-average')
+
+    if labels is None:
+        labels = y.cat.categories
+
+    for cat, label in zip(y.cat.categories, labels):
+        ax.plot(rec[cat], prec[cat], label=cat)
+
+    ax.legend()
+    ax.set_xlabel('Recall')
+    ax.set_ylabel('Precision')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+
+    try:
+        return fig
+    except:
+        return ax
+
+
+def plotResiduals(X, Y, Yp, xLabels=None, xUnits=None, yLabels=None,
+                  yUnits=None, pltParams={}):
+
+    if X.ndim == 1:
+        X = X[:, None]
+
+    if Y.ndim == 1:
+        Y = Y[:, None]
+
+    if Yp.ndim == 1:
+        Yp = Yp[:, None]
+
+    if Y.shape != Yp.shape:
+        raise Exception('Y ({}) and Yp ({}) '
+                        'must have same dimensions'.format(Y.shape, Yp.shape))
+
+    if X.shape[0] != Y.shape[0]:
+        raise Exception('X ({}) and Y ({}) must have same number of '
+                        'rows'.format(X.shape[0], Y.shape[0]))
+
+    if xLabels is None:
+        try:
+            xLabels = list(X.columns)
+        except AttributeError:
+            xLabels = [''] * X.shape[1]
+    elif len(xLabels) != X.shape[1]:
+        raise Exception('xLabels must have same length ({}) as the number of '
+                        'columns of X ({})'.format(len(xLabels), X.shape[1]))
+    else:
+        xLabels = list(xLabels)
+
+    if xUnits is not None:
+        if len(xUnits) != len(xLabels):
+            raise Exception('xUnits must have same length ({}) '
+                            'as xLabels ({}) if supplied'.format(len(xUnits),
+                                                                 len(xLabels)))
+        for i, xUnit in enumerate(xUnits):
+            xLabels[i] += ' ({})'.format(xUnit)
+
+    if yLabels is None:
+        try:
+            yLabels = list(Y.columns)
+        except AttributeError:
+            yLabels = [''] * Y.shape[1]
+    elif len(yLabels) != Y.shape[1]:
+        raise Exception('yLabels must have same length ({}) as the number of '
+                        'columns of Y ({})'.format(len(yLabels), Y.shape[1]))
+    else:
+        yLabels = list(yLabels)
+
+    yLabels = [yLabel + ' Error' for yLabel in yLabels]
+
+    if yUnits is not None:
+        if len(yUnits) != len(yLabels):
+            raise Exception('yUnits must have same length ({}) '
+                            'as yLabels ({}) if supplied'.format(len(yUnits),
+                                                                 len(yLabels)))
+        for i, yUnit in enumerate(yUnits):
+            yLabels[i] += ' ({})'.format(yUnit)
+
+    figs = []
+    for i, xLabel in enumerate(xLabels):
+        fig = plt.figure(figsize=(10.21, 3 * len(yLabels)))
+        for j, yLabel in enumerate(yLabels):
+            ax = fig.add_subplot(len(yLabels), 1, j + 1)
+            ax.plot(X[:, i], Yp[:, j] - Y[:, j], '.', **pltParams)
+            ax.set_ylabel(yLabel)
+        ax.set_xlabel(xLabel)
+        figs.append(fig)
+
+    return figs
+
 
 if imaging:
     def plotImages(X, Y, images, sizes=20, alphas=1, ax=None):

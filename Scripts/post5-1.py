@@ -17,11 +17,7 @@ for year in years:
 
     bip = Bip(years=(year,), n_jobs=-1)
 
-    inds = bip.data.loc[~bip.data.exclude & ~bip.data.scImputed, :].index
-    trainInds = bip.scImputer.trainX_.index
-    testInds = inds.difference(trainInds)
-
-    testData = bip.data.loc[testInds, :]
+    testData = bip.data.loc[~bip.data.exclude & ~bip.data.scImputed, :]
 
     testY = bip.scImputer.createY(testData)
     testYp = bip.scImputer.predictD(testData)

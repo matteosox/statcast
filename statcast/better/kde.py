@@ -1,13 +1,16 @@
+from inspect import Parameter
+
 import numpy as np
 
 from sklearn.neighbors.kde import KernelDensity
-from sklearn.utils.validation import check_array
+from sklearn.utils.validation import check_array, check_is_fitted
 
 from scipy import stats
 from scipy.special import gamma
+from scipy.spatial.distance import pdist
 
 from .base import BetterModel
-from .spark import GridSearchCV
+from .spark import gridCVScoresAlt
 
 
 def ballVol(r, n):
@@ -70,33 +73,64 @@ kernelFunctions = {'gaussian': gaussian,
 class BetterKernelDensity(KernelDensity, BetterModel):
     '''Doc String'''
 
+    _params = [Parameter('normalize', Parameter.POSITIONAL_OR_KEYWORD,
+                         default=True)]
+
     def _se(self, X):
         '''Doc String'''
 
-        n = self.trainX_.shape[0]
+        trainX = np.array(self.tree_.data)
+        n = trainX.shape[0]
 
         Y = np.array([self._kernelFunction(X - row)
-                     for row in self.trainX_])
+                     for row in trainX])
         s2 = Y.var(axis=0, ddof=1)
         return np.sqrt(s2 / n).flatten()
+
+    def fit(self, X, y=None):
+        '''Doc String'''
+
+        if self.normalize:
+            X = check_array(X)
+            S = np.cov(X, rowvar=False)
+            H = np.linalg.cholesky(S)
+            self.invH_ = np.linalg.inv(H)
+            self.detH_ = np.linalg.det(H)
+            X = X.dot(self.invH_.T)
+
+        return super().fit(X, y)
 
     def predict(self, X):
         ''' Doc String'''
 
         return np.exp(self.score_samples(X))
 
+    def score_samples(self, X):
+        '''Doc String'''
+
+        if self.normalize:
+            X = check_array(X)
+            X = X.dot(self.invH_.T)
+            return super().score_samples(X) - np.log(self.detH_)
+
+        return super().score_samples(X)
+
     def confidence(self, X, alpha=0.05):
         '''Doc String'''
 
+        check_is_fitted(self, ['tree_'])
+        trainX = np.array(self.tree_.data)
         X = check_array(X)
-        a, b = self.trainX_.min(), self.trainX_.max()
+        a, b = trainX.min(0), trainX.max(0)
         if self.kernel == 'gaussian':
-            w = 3
+            w = 6
         elif self.kernel == 'exponential':
-            w = 2 * stats.expon.ppf(2 * (stats.norm.cdf(1.5) - 0.5))
+            w = 2 * stats.expon.ppf(2 * (stats.norm.cdf(3) - 0.5))
         else:
             w = 2
-        m = (b - a) / (w * self.bandwidth)
+        m = np.prod(b - a) / (w * self.bandwidth) ** X.shape[1]
+        if self.normalize:
+            m *= self.detH_
         q = stats.norm.ppf((1 + (1 - alpha) ** (1 / m)) / 2)
 
         f = self.predict(X)
@@ -112,18 +146,45 @@ class BetterKernelDensity(KernelDensity, BetterModel):
     def _kernelFunction(self, X):
         '''Doc String'''
 
-        return kernelFunctions[self.kernel](X, self.bandwidth)
+        if self.normalize:
+            X = check_array(X)
+            X = X.dot(self.invH_.T)
+        return kernelFunctions[self.kernel](X, self.bandwidth) / self.detH_
 
     def selectBandwidth(self, bandwidths=None, n_jobs=1, cv=None):
         '''Doc String'''
 
-        if bandwidths is None:
-            xmins, xmaxs = self.trainX_.min(0), self.trainX_.max(0)
-            bandwidths = np.logspace(-3, -1, num=10) * (xmaxs - xmins).max()
+        check_is_fitted(self, ['tree_'])
+        trainX = np.array(self.tree_.data)
 
-        parameters = {'bandwidth': bandwidths}
-        trainGrid = GridSearchCV(self, parameters, cv=cv,
-                                 n_jobs=n_jobs, refit=False).fit(self.trainX_)
-        self.bandwidth = trainGrid.best_params_['bandwidth']
-        self.cv_results_ = trainGrid.cv_results_
+        if bandwidths is None:
+            if self.normalize:
+                X = trainX.dot(self.invH_.T)
+            else:
+                X = trainX
+
+            bandMax = pdist(X).mean()
+            nnDists = self.tree_.query(X, k=2)[0][:, 1]
+            if self.kernel in ['gaussian', 'exponential']:
+                bandMin = nnDists.mean()
+            else:
+                bandMin = nnDists.max() * 1.02
+            bandwidths = np.logspace(np.log10(bandMin), np.log10(bandMax),
+                                     num=5)
+            if cv is None:
+                cv = 3
+            scale = ((cv - 1) / cv) ** (-1 / (4 + trainX.shape[1]))
+
+        parameters = {'bandwidth': bandwidths * scale}
+        results = gridCVScoresAlt(self, parameters, trainX,
+                                  n_jobs=n_jobs, cv=cv)
+        totalScores = [scores.sum() for scores in results['scores']]
+
+        if not np.isfinite(totalScores).any():
+            self.bandwidth = bandMax
+        else:
+            bestInd = np.argmax(totalScores)
+            bestBand = results.loc[bestInd, 'params']['bandwidth']
+            self.bandwidth = bestBand / scale
+        self.cv_results_ = results
         return self

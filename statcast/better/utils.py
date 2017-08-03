@@ -117,4 +117,4 @@ def findTrainSplit(estimator, data, maxTrain=1.0, scoreThresh=2e-2,
     estimator.trainSplitResults_ = pd.DataFrame({'size': trainSizes,
                                                  'score': scores}). \
         sort_values(by='size')
-    return estimator
+    return estimator, subData

@@ -14,25 +14,6 @@ xyMethods = ['fit', 'fit_predict', 'fit_transform', 'score', 'partial_fit']
 fitMethods = ['fit', 'fit_predict', 'fit_transform', 'partial_fit']
 
 
-def storeTrainData(clsobj, methodName):
-    '''Doc String'''
-
-    if hasattr(clsobj, methodName):
-        method = getattr(clsobj, methodName)
-        methodSig = signature(method)
-
-        def newMethod(self, X, Y=None, *args, **kwargs):
-            '''Doc String'''
-
-            self = method(self, X, Y, *args, **kwargs)
-            self.trainX_ = X.copy()
-            if Y is not None:
-                self.trainY_ = Y.copy()
-            return self
-        newMethod.__signature__ = methodSig
-        setattr(clsobj, methodName, newMethod)
-
-
 def addXMethod(clsobj, method):
     '''Doc String'''
 
@@ -91,13 +72,6 @@ def addXYMethod(clsobj, method):
             return getattr(self, method)(X, Y, *args, **kwargs)
         methodD.__signature__ = methodDSig
         setattr(clsobj, method + 'D', methodD)
-
-
-def storeTrainDataFits(clsobj):
-    '''Doc String'''
-
-    for method in fitMethods:
-        storeTrainData(clsobj, method)
 
 
 def addXMethods(clsobj):
@@ -170,7 +144,6 @@ class BetterMetaClass(abc.ABCMeta):
         newInit.__signature__ = newSig
         setattr(clsobj, '__init__', newInit)
 
-        storeTrainDataFits(clsobj)
         addXMethods(clsobj)
         addXYMethods(clsobj)
 

@@ -175,13 +175,12 @@ class Bip():
         '''Doc String'''
 
         trainData = self.data[~self.data.exclude & ~self.data.scImputed]
-        self.scImputer = findTrainSplit(_scImputer, trainData,
-                                        n_jobs=self.n_jobs)
-        subTrainData = trainData.loc[self.scImputer.trainX_.index, :]
+        self.scImputer, subTrainData = findTrainSplit(_scImputer, trainData,
+                                                      n_jobs=self.n_jobs)
         self.scImputer = otherRFE(self.scImputer, subTrainData, cv=10,
                                   n_jobs=self.n_jobs)
-        self.scImputer = findTrainSplit(self.scImputer, trainData, cv=10,
-                                        n_jobs=self.n_jobs)
+        self.scImputer, _ = findTrainSplit(self.scImputer, trainData, cv=10,
+                                           n_jobs=self.n_jobs)
 
     def _initSCFactorMdl(self, scFactorMdlName=None):
         '''Doc String'''
@@ -228,19 +227,14 @@ class Bip():
         labels = ['Exit Velocity', 'Launch Angle', 'Hit Distance']
         units = ['mph', 'degrees', 'feet']
 
-        inds = self.data.loc[~self.data.exclude & ~self.data.scImputed,
-                             :].index
-        trainInds = self.scImputer.trainX_.index
-        testInds = inds.difference(trainInds)
-
-        testData = self.data.loc[testInds, :]
+        testData = self.data.loc[~self.data.exclude & ~self.data.scImputed, :]
         imputeData = self.data.loc[~self.data.exclude & self.data.scImputed, :]
 
         testY = self.scImputer.createY(testData).values.T
         testYp = self.scImputer.predictD(testData).T
         imputeY = self.scImputer.predictD(imputeData).T
 
-        del inds, trainInds, testInds, testData, imputeData
+        del testData, imputeData
 
         name = 'bandwidths{}.csv'.format('_'.join(str(year)
                                                   for year in self.years))
