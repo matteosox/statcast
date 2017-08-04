@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from matplotlib.lines import Line2D
+from sklearn.base import clone
 
 from .database.bbsavant import DB as SavantDB
 from .database.gd_weather import DB as WeatherDB
@@ -175,12 +176,11 @@ class Bip():
         '''Doc String'''
 
         trainData = self.data[~self.data.exclude & ~self.data.scImputed]
-        self.scImputer, subTrainData = findTrainSplit(_scImputer, trainData,
+        scImputer = clone(_scImputer)
+        self.scImputer, subTrainData = findTrainSplit(scImputer, trainData,
                                                       n_jobs=self.n_jobs)
-        self.scImputer = otherRFE(self.scImputer, subTrainData, cv=10,
-                                  n_jobs=self.n_jobs)
-        self.scImputer, _ = findTrainSplit(self.scImputer, trainData, cv=10,
-                                           n_jobs=self.n_jobs)
+        otherRFE(self.scImputer, subTrainData, cv=10, n_jobs=self.n_jobs)
+        findTrainSplit(self.scImputer, trainData, cv=10, n_jobs=self.n_jobs)
 
     def _initSCFactorMdl(self, scFactorMdlName=None):
         '''Doc String'''
@@ -208,8 +208,8 @@ class Bip():
         '''Doc String'''
 
         trainData = self.data[~self.data.exclude]
-
-        self.scFactorMdl = _scFactorMdl.chooseFormula(trainData,
+        scFactorMdl = clone(_scFactorMdl)
+        self.scFactorMdl = scFactorMdl.chooseFormula(trainData,
                                                       _scFactorMdl.formulas,
                                                       n_jobs=self.n_jobs,
                                                       cv=10)
