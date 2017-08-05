@@ -19,7 +19,7 @@ from statcast.better.declassifier import KDEClassifier
 
 # %% Create Spark Context
 
-sc = SparkContext(appName='plot10')
+sc = SparkContext(appName='post10')
 
 # %%
 

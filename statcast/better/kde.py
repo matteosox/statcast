@@ -4,6 +4,7 @@ import numpy as np
 
 from sklearn.neighbors.kde import KernelDensity
 from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.model_selection import check_cv
 
 from scipy import stats
 from scipy.special import gamma
@@ -62,6 +63,7 @@ def cosine(X, h):
     y = np.cos(x * np.pi / 2) * (x < 1) * np.pi / 4
     return y * h ** -d
 
+
 kernelFunctions = {'gaussian': gaussian,
                    'tophat': tophat,
                    'epanechnikov': epanechnikov,
@@ -92,10 +94,9 @@ class BetterKernelDensity(KernelDensity, BetterModel):
 
         if self.normalize:
             X = check_array(X)
-            S = np.cov(X, rowvar=False)
-            H = np.linalg.cholesky(S)
-            self.invH_ = np.linalg.inv(H)
-            self.detH_ = np.linalg.det(H)
+            U, s, V = np.linalg.svd(X, full_matrices=False)
+            self.invH_ = np.diag(np.sqrt(X.shape[0]) / s).dot(V)
+            self.detH_ = 1 / np.prod(np.sqrt(X.shape[0]) / s)
             X = X.dot(self.invH_.T)
 
         return super().fit(X, y)
@@ -157,23 +158,26 @@ class BetterKernelDensity(KernelDensity, BetterModel):
         check_is_fitted(self, ['tree_'])
         trainX = np.array(self.tree_.data)
 
-        if bandwidths is None:
-            if self.normalize:
-                X = trainX.dot(self.invH_.T)
-            else:
-                X = trainX
+        nSplits = check_cv(cv).get_n_splits()
 
-            bandMax = pdist(X).mean()
-            nnDists = self.tree_.query(X, k=2)[0][:, 1]
+        if trainX.shape[0] == 1:
+            self.bandwidth = 1
+            self.cv_results_ = None
+            return self
+        elif trainX.shape[0] < nSplits:
+            cv = nSplits = trainX.shape[0]
+
+        scale = ((nSplits - 1) / nSplits) ** (-1 / (4 + trainX.shape[1]))
+
+        if bandwidths is None:
+            bandMax = pdist(trainX).mean()
+            nnDists = self.tree_.query(trainX, k=2)[0][:, 1]
             if self.kernel in ['gaussian', 'exponential']:
                 bandMin = nnDists.mean()
             else:
                 bandMin = nnDists.max() * 1.02
             bandwidths = np.logspace(np.log10(bandMin), np.log10(bandMax),
                                      num=5)
-            if cv is None:
-                cv = 3
-            scale = ((cv - 1) / cv) ** (-1 / (4 + trainX.shape[1]))
 
         parameters = {'bandwidth': bandwidths * scale}
         results = gridCVScoresAlt(self, parameters, trainX,
