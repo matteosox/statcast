@@ -170,7 +170,11 @@ class BetterKernelDensity(KernelDensity, BetterModel):
         scale = ((nSplits - 1) / nSplits) ** (-1 / (4 + trainX.shape[1]))
 
         if bandwidths is None:
-            bandMax = pdist(trainX).mean()
+            if trainX.shape[0] > 1000:
+                subs = np.random.randint(0, trainX.shape[0], size=(1000,))
+                bandMax = pdist(trainX[subs]).mean()
+            else:
+                bandMax = pdist(trainX).mean()
             nnDists = self.tree_.query(trainX, k=2)[0][:, 1]
             if self.kernel in ['gaussian', 'exponential']:
                 bandMin = nnDists.mean()
