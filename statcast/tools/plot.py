@@ -141,7 +141,7 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
 
     try:
         ax.set_xlabel(data.name)
-    except:
+    except AttributeError:
         pass
 
     ax.set_ylabel('Probability Density (%)')
@@ -170,7 +170,7 @@ def plotPrecRec(y, yp, ax=None, label=None):
 
     try:
         return fig
-    except:
+    except NameError:
         return ax
 
 
@@ -181,45 +181,47 @@ def plotPrecRecMN(y, yp, ax=None, labels=None):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
-    if y is not pd.api.types.CategoricalDtype():
-        y = pd.Series(y).astype('category')
+    if y is pd.api.types.CategoricalDtype():
+        classes = sorted(y.cat.categories)
+    else:
+        classes = np.unique(y)
 
-    if y.cat.categories.shape[0] != yp.shape[1]:
-        raise Exception('Number of categories in y must match number of '
-                        'columns in yp')
+    if labels is None:
+        labels = classes
+
+    if not classes.shape[0] == yp.shape[1] == len(labels):
+        raise Exception('Number of classes in y must match number of '
+                        'columns in yp and number labels.')
     elif y.shape[0] != yp.shape[0]:
-        raise Exception('Number of rows in y & yp must match')
+        raise Exception('Number of rows in y & yp must match.')
 
     prec = {}
     rec = {}
     Y = []
 
-    for i, cat in enumerate(y.cat.categories):
-        yi = y == cat
+    for i, klass in enumerate(classes):
+        yi = y == klass
         Y.append(yi)
-        prec[cat], rec[cat], _ = precision_recall_curve(yi, yp[:, i])
+        prec[klass], rec[klass], _ = precision_recall_curve(yi, yp[:, i])
 
     Y = np.array(Y)
     prec['micro'], rec['micro'], _ = \
         precision_recall_curve(Y.ravel(), yp.ravel())
 
-    ax.plot(rec['micro'], prec['micro'], label='micro-average')
+    ax.plot(rec['micro'] * 100, prec['micro'] * 100, label='micro-average')
 
-    if labels is None:
-        labels = y.cat.categories
-
-    for cat, label in zip(y.cat.categories, labels):
-        ax.plot(rec[cat], prec[cat], label=cat)
+    for klass, label in zip(classes, labels):
+        ax.plot(rec[klass] * 100, prec[klass] * 100, label=label)
 
     ax.legend()
-    ax.set_xlabel('Recall')
-    ax.set_ylabel('Precision')
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
+    ax.set_xlabel('Recall (%)')
+    ax.set_ylabel('Precision (%)')
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
 
     try:
         return fig
-    except:
+    except NameError:
         return ax
 
 
@@ -330,5 +332,5 @@ if imaging:
 
         try:
             return fig
-        except:
+        except NameError:
             return ax

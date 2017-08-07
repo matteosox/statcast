@@ -3,13 +3,12 @@
 import os
 import datetime
 
-import numpy as np
-
 import requests
 from pyspark import SparkContext
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import LabelBinarizer
 
 from statcast.bip import Bip
 from statcast.better.spark import cross_val_predict
@@ -54,7 +53,7 @@ y2 = subData[yLabel]
 
 skf = StratifiedKFold(n_splits=10, shuffle=True)
 
-kdc = KDEClassifier(kdeParams=dict(kernel='epanechnikov', rtol=1e-4),
+kdc = KDEClassifier(kdeParams=dict(kernel='gaussian'),
                     n_jobs=-1)
 
 y11p = cross_val_predict(kdc, X1, y1, cv=skf, n_jobs=sc,
@@ -66,15 +65,15 @@ y12p = cross_val_predict(kdc, X1, y2, cv=skf, n_jobs=sc,
 y22p = cross_val_predict(kdc, X2, y2, cv=skf, n_jobs=sc,
                          method='predict_proba')
 
-y12p = y12p[:, [0, 1, 3, 4, 2]]
-y22p = y22p[:, [0, 1, 3, 4, 2]]
+y11p = y11p[:, 1]
+y21p = y21p[:, 1]
 
 # %% Log-loss
 
 logL11 = log_loss(y1, y11p)
 logL21 = log_loss(y1, y21p)
-logL12 = log_loss(y2.cat.codes.values, y12p)
-logL22 = log_loss(y2.cat.codes.values, y22p)
+logL12 = log_loss(y2, y12p)
+logL22 = log_loss(y2, y22p)
 
 # %% Plot Precision-Recall Curve
 
@@ -107,20 +106,19 @@ for label, fig in zip(xLabels, figs21):
     fig.gca().set_title('HR(EV + LA + SA) Classifier')
     fig.savefig('KDC(EV + LA + SA) HR Residuals over {}'.format(label))
 
-Y2 = np.zeros(shape=(y2.shape[0], len(y2.cat.categories)))
-for y, code in zip(Y2, y2.cat.codes):
-    y[code] = 1
+Y2 = LabelBinarizer().fit_transform(y2)
+y2Labels = sorted(y2.cat.categories)
 
 figs12 = plotResiduals(X1.values, Y2 * 100, y12p * 100,
                        xLabels=fancyLabels[:-1], xUnits=units[:-1],
-                       yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                       yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                        pltParams={'ms': 1})
 for label, fig in zip(xLabels[:-1], figs12):
     fig.get_axes()[0].set_title('Hit(EV + LA) Classifier')
     fig.savefig('KDC(EV + LA) Hit Residuals over {}'.format(label))
 figs22 = plotResiduals(X2.values, Y2 * 100, y22p * 100,
                        xLabels=fancyLabels, xUnits=units,
-                       yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                       yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                        pltParams={'ms': 1})
 for label, fig in zip(xLabels, figs22):
     fig.get_axes()[0].set_title('Hit(EV + LA + SA) Classifier')

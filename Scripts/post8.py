@@ -1,10 +1,9 @@
 # %% Imports
 
-import numpy as np
-
 from statsmodels import api as sm
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import LabelBinarizer
 
 from statcast.bip import Bip
 from statcast.better.sm import BetterGLM, BetterMNLogit
@@ -43,7 +42,7 @@ X2 = subData.loc[:, xLabels]
 y1 = subData[yLabel] == 'Home Run'
 y2 = subData[yLabel]
 
-skf = StratifiedKFold(n_splits=10)
+skf = StratifiedKFold(n_splits=10, shuffle=True)
 
 glm = BetterGLM(
     SMParams={'family': sm.families.Binomial(sm.families.links.probit)})
@@ -58,15 +57,12 @@ y12p = cross_val_predict(mnLogit, X1, y2, cv=skf, n_jobs=-1,
 y22p = cross_val_predict(mnLogit, X2, y2, cv=skf, n_jobs=-1,
                          method='predict_proba')
 
-y12p = y12p[:, [0, 1, 3, 4, 2]]
-y22p = y22p[:, [0, 1, 3, 4, 2]]
-
 # %% Log-loss
 
 logL11 = log_loss(y1, y11p)
 logL21 = log_loss(y1, y21p)
-logL12 = log_loss(y2.cat.codes.values, y12p)
-logL22 = log_loss(y2.cat.codes.values, y22p)
+logL12 = log_loss(y2, y12p)
+logL22 = log_loss(y2, y22p)
 
 # %% Plot Precision-Recall Curve
 
@@ -99,9 +95,7 @@ for label, fig in zip(xLabels, figs21):
     fig.gca().set_title('HR(EV + LA + SA) Classifier')
     fig.savefig('GLM(EV + LA + SA) HR Residuals over {}'.format(label))
 
-Y2 = np.zeros(shape=(y2.shape[0], len(y2.cat.categories)))
-for y, code in zip(Y2, y2.cat.codes):
-    y[code] = 1
+Y2 = LabelBinarizer().fit_transform(y2)
 
 figs12 = plotResiduals(X1.values, Y2 * 100, y12p * 100,
                        xLabels=fancyLabels[:-1], xUnits=units[:-1],

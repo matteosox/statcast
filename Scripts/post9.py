@@ -1,9 +1,8 @@
 # %% Imports
 
-import numpy as np
-
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import log_loss
+from sklearn.preprocessing import LabelBinarizer
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, \
     QuadraticDiscriminantAnalysis
 
@@ -43,7 +42,7 @@ X2 = subData.loc[:, xLabels]
 y1 = subData[yLabel] == 'Home Run'
 y2 = subData[yLabel]
 
-skf = StratifiedKFold(n_splits=10)
+skf = StratifiedKFold(n_splits=10, shuffle=True)
 
 lda = LinearDiscriminantAnalysis()
 qda = QuadraticDiscriminantAnalysis()
@@ -71,22 +70,17 @@ y21pl = y21pl[:, 1]
 y11pq = y11pq[:, 1]
 y21pq = y21pq[:, 1]
 
-y12pl = y12pl[:, [0, 1, 3, 4, 2]]
-y22pl = y22pl[:, [0, 1, 3, 4, 2]]
-y12pq = y12pq[:, [0, 1, 3, 4, 2]]
-y22pq = y22pq[:, [0, 1, 3, 4, 2]]
-
 # %% Log-loss
 
 logL11l = log_loss(y1, y11pl)
 logL21l = log_loss(y1, y21pl)
-logL12l = log_loss(y2.cat.codes.values, y12pl)
-logL22l = log_loss(y2.cat.codes.values, y22pl)
+logL12l = log_loss(y2, y12pl)
+logL22l = log_loss(y2, y22pl)
 
 logL11q = log_loss(y1, y11pq)
 logL21q = log_loss(y1, y21pq)
-logL12q = log_loss(y2.cat.codes.values, y12pq)
-logL22q = log_loss(y2.cat.codes.values, y22pq)
+logL12q = log_loss(y2, y12pq)
+logL22q = log_loss(y2, y22pq)
 
 # %% Plot Precision-Recall Curve
 
@@ -135,20 +129,19 @@ for label, fig in zip(xLabels, figs21l):
     fig.gca().set_title('LDA(EV + LA + SA) HR Classifier')
     fig.savefig('LDA(EV + LA + SA) HR Residuals over {}'.format(label))
 
-Y2 = np.zeros(shape=(y2.shape[0], len(y2.cat.categories)))
-for y, code in zip(Y2, y2.cat.codes):
-    y[code] = 1
+Y2 = LabelBinarizer().fit_transform(y2)
+y2Labels = sorted(y2.cat.categories)
 
 figs12l = plotResiduals(X1.values, Y2 * 100, y12pl * 100,
                         xLabels=fancyLabels[:-1], xUnits=units[:-1],
-                        yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                        yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                         pltParams={'ms': 1})
 for label, fig in zip(xLabels[:-1], figs12l):
     fig.get_axes()[0].set_title('LDA(EV + LA) Hit Classifier')
     fig.savefig('LDA(EV + LA) Hit Residuals over {}'.format(label))
 figs22l = plotResiduals(X2.values, Y2 * 100, y22pl * 100,
                         xLabels=fancyLabels, xUnits=units,
-                        yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                        yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                         pltParams={'ms': 1})
 for label, fig in zip(xLabels, figs22l):
     fig.get_axes()[0].set_title('LDA(EV + LA + SA) Hit Classifier')
@@ -171,14 +164,14 @@ for label, fig in zip(xLabels, figs21q):
 
 figs12q = plotResiduals(X1.values, Y2 * 100, y12pq * 100,
                         xLabels=fancyLabels[:-1], xUnits=units[:-1],
-                        yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                        yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                         pltParams={'ms': 1})
 for label, fig in zip(xLabels[:-1], figs12q):
     fig.get_axes()[0].set_title('QDA(EV + LA) Hit Classifier')
     fig.savefig('QDA(EV + LA) Hit Residuals over {}'.format(label))
 figs22q = plotResiduals(X2.values, Y2 * 100, y22pq * 100,
                         xLabels=fancyLabels, xUnits=units,
-                        yLabels=y2.cat.categories, yUnits=['%'] * Y2.shape[1],
+                        yLabels=y2Labels, yUnits=['%'] * Y2.shape[1],
                         pltParams={'ms': 1})
 for label, fig in zip(xLabels, figs22q):
     fig.get_axes()[0].set_title('QDA(EV + LA + SA) Hit Classifier')
