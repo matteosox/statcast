@@ -150,7 +150,10 @@ class BetterKernelDensity(KernelDensity, BetterModel):
         if self.normalize:
             X = check_array(X)
             X = X.dot(self.invH_.T)
-        return kernelFunctions[self.kernel](X, self.bandwidth) / self.detH_
+            scale = self.detH_
+        else:
+            scale = 1
+        return kernelFunctions[self.kernel](X, self.bandwidth) / scale
 
     def selectBandwidth(self, bandwidths=None, n_jobs=1, cv=None):
         '''Doc String'''

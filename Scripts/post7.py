@@ -19,11 +19,21 @@ labels = ['hit_speed', 'hit_angle', 'hit_distance_sc']
 units = ['mph', 'degrees', 'feet']
 fancyLabels = ['Exit Velocity', 'Launch Angle', 'Hit Distance']
 
-for label, unit, fancyLabel in zip(labels, units, fancyLabels):
-    x = bip15.scFactorMdl.factors_[label]['home_team']['(Intercept)'] + \
-        bip15.scFactorMdl.factors_[label]['home_team']['scImputedFALSE']
-    y = bip16.scFactorMdl.factors_[label]['home_team']['(Intercept)'] + \
-        bip16.scFactorMdl.factors_[label]['home_team']['scImputedFALSE']
+for i, (label, unit, fancyLabel) in enumerate(zip(labels, units, fancyLabels)):
+    if '(scImputed||home_team)' in bip15.scFactorMdl.formulas[i]:
+        x = bip15.scFactorMdl.factors_[label]['home_team']['(Intercept)'] + \
+            bip15.scFactorMdl.factors_[label]['home_team']['scImputedFALSE']
+        missing15 = False
+    else:
+        x = bip15.scFactorMdl.factors_[label]['home_team']['(Intercept)']
+        missing15 = True
+    if '(scImputed||home_team)' in bip16.scFactorMdl.formulas[i]:
+        y = bip16.scFactorMdl.factors_[label]['home_team']['(Intercept)'] + \
+            bip16.scFactorMdl.factors_[label]['home_team']['scImputedFALSE']
+        missing16 = False
+    else:
+        y = bip16.scFactorMdl.factors_[label]['home_team']['(Intercept)']
+        missing16 = True
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -48,6 +58,9 @@ for label, unit, fancyLabel in zip(labels, units, fancyLabels):
     addText(ax, labels, loc='lower right')
 
     fig.savefig('{} 2015-2016 Correlation'.format(fancyLabel))
+
+    if missing15 or missing16:
+        continue
 
     x = bip15.scFactorMdl.factors_[label]['home_team']['(Intercept)'] + \
         bip15.scFactorMdl.factors_[label]['home_team']['scImputedTRUE']

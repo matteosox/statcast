@@ -124,7 +124,10 @@ class BetterMetaClass(abc.ABCMeta):
         except AttributeError:
             raise RuntimeError('BetterModels _params class attribute must be '
                                'a list of Parameters from the inspect module')
-        newSig = Signature([firstIn] + newParams + clsobj._params + oldParams)
+
+        customParams = [param for param in clsobj._params
+                        if param not in newParams]
+        newSig = Signature([firstIn] + newParams + customParams + oldParams)
 
         def newInit(self, *args, **kwargs):
             '''Doc String'''
@@ -135,7 +138,7 @@ class BetterMetaClass(abc.ABCMeta):
             for dummy in range(len(newParams)):
                 name, val = bound.arguments.popitem(False)
                 setattr(self, name, val)
-            for dummy in range(len(clsobj._params)):
+            for dummy in range(len(customParams)):
                 name, val = bound.arguments.popitem(False)
                 setattr(self, name, val)
 

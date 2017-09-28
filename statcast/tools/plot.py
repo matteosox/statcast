@@ -115,10 +115,12 @@ def plotKDHist(data, kernel='epanechnikov', bandwidth=None, alpha=5e-2,
     xmin, xmax = min(data), max(data)
 
     if bandwidth is None:
-        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4).fit(data)
+        kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
+                                  normalize=False).fit(data)
         kde.selectBandwidth(n_jobs=n_jobs, cv=cv)
     else:
         kde = BetterKernelDensity(kernel=kernel, rtol=1e-4,
+                                  normalize=False,
                                   bandwidth=bandwidth).fit(data)
 
     xFit = np.linspace(xmin - kde.bandwidth, xmax + kde.bandwidth, 1e3)

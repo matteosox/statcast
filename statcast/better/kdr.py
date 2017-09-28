@@ -3,7 +3,6 @@ from inspect import signature
 import numpy as np
 
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.neighbors.kde import KernelDensity
 from sklearn.utils.validation import check_array, check_X_y, check_is_fitted
 from sklearn.metrics import mean_squared_error
 
@@ -16,7 +15,8 @@ from .kde import BetterKernelDensity
 class BetterKDR(BaseEstimator, RegressorMixin, BetterModel):
     '''Doc String'''
 
-    _params = [param for param in signature(KernelDensity).parameters.values()]
+    _params = [param for param
+               in signature(BetterKernelDensity).parameters.values()]
 
     def __init__(self):
         '''Doc String'''
