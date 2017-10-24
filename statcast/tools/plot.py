@@ -1,4 +1,4 @@
-import os
+# import os
 
 import numpy as np
 import pandas as pd
@@ -17,10 +17,10 @@ from sklearn.metrics import precision_recall_curve
 
 from ..better.kde import BetterKernelDensity
 
-from . import __path__
+# from . import __path__
 
-plt.style.use(os.path.join(os.path.dirname(__path__[0]),
-                           'data', 'blackontrans.mplstyle'))
+# plt.style.use(os.path.join(os.path.dirname(__path__[0]),
+#                            'data', 'blackontrans.mplstyle'))
 
 
 def correlationPlot(Y, Yp, labels=None, units=None, **plotParams):
@@ -164,11 +164,11 @@ def plotPrecRec(y, yp, ax=None, label=None):
 
     prec, rec, _ = precision_recall_curve(y, yp)
 
-    ax.plot(rec, prec, label=label)
-    ax.set_xlabel('Recall')
-    ax.set_ylabel('Precision')
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
+    ax.plot(rec * 100, prec * 100, label=label)
+    ax.set_xlabel('Recall (%)')
+    ax.set_ylabel('Precision (%)')
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
 
     try:
         return fig
@@ -207,10 +207,10 @@ def plotPrecRecMN(y, yp, ax=None, labels=None):
         prec[klass], rec[klass], _ = precision_recall_curve(yi, yp[:, i])
 
     Y = np.array(Y)
-    prec['micro'], rec['micro'], _ = \
-        precision_recall_curve(Y.ravel(), yp.ravel())
-
-    ax.plot(rec['micro'] * 100, prec['micro'] * 100, label='micro-average')
+#    prec['micro'], rec['micro'], _ = \
+#        precision_recall_curve(Y.ravel(), yp.ravel())
+#
+#    ax.plot(rec['micro'] * 100, prec['micro'] * 100, label='micro-average')
 
     for klass, label in zip(classes, labels):
         ax.plot(rec[klass] * 100, prec[klass] * 100, label=label)
